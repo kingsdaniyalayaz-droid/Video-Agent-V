@@ -1,0 +1,62 @@
+﻿# =========================
+# Secrets / environment
+# =========================
+.env
+.env.*
+!.env.example
+
+# Authentication / session data
+cookies.txt
+*.cookie
+*.cookies
+
+# =========================
+# Python generated files
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+build/
+dist/
+wheels/
+*.egg-info/
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+
+# =========================
+# Runtime / generated data
+# =========================
+data/
+uploads/
+downloads/
+audio/
+chunks/
+vector_db/
+
+# =========================
+# Test / coverage cache
+# =========================
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# =========================
+# Streamlit secrets
+# =========================
+.streamlit/secrets.toml
+
+# =========================
+# OS / editor files
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+.env

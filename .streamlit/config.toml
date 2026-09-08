@@ -1,0 +1,4 @@
+# Maximum size (in MB) accepted by Streamlit's file uploader.
+# 4096 MB = 4 GB.
+[server]
+maxUploadSize = 4096
