@@ -55,7 +55,7 @@ RATE_LIMIT_MAX_DELAY = _env_float("RATE_LIMIT_MAX_DELAY", 120.0)        # hard c
 RATE_LIMIT_JITTER_FACTOR = _env_float("RATE_LIMIT_JITTER_FACTOR", 0.2)  # + up to 20%
 RETRY_AFTER_CEILING = _env_float("RETRY_AFTER_CEILING", 120.0)          # Retry-After cap
 
-DEFAULT_CHUNK_SIZE = 6000
+DEFAULT_CHUNK_SIZE = 3500
 
 # Minimum combined (deterministic + LLM) quality score required to pass review.
 MIN_QUALITY_SCORE = 75
@@ -72,7 +72,9 @@ EXCESSIVE_ENGLISH_RATIO_THRESHOLD = 0.35
 GENUINE_ENGLISH_EVIDENCE_RATIO_THRESHOLD = 0.35
 
 # Conservative cloud output cap derived from the default transcript chunk size.
-MISTRAL_MAX_TOKENS = max(512, min(2048, DEFAULT_CHUNK_SIZE // 3))
+MISTRAL_MAX_TOKENS = int(
+    os.getenv("MISTRAL_MAX_TOKENS", "4096")
+)
 
 # ---------------------------------------------------------------------------
 # Forbidden Unicode ranges (Urdu / Arabic / Devanagari / Hindi scripts)
