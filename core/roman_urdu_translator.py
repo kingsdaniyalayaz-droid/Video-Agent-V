@@ -2162,6 +2162,11 @@ def review_roman_urdu_translation(
             max_attempts=api_attempts,
         )
         review = _normalize_reviewer_verdict(_parse_review(response))
+    except RateLimitError:
+        # Preserve the existing rate-limit contract.  A 429 is surfaced to
+        # translate_chunk, which retains its retry-after metadata instead of
+        # misclassifying the provider condition as a malformed review.
+        raise
     except (RetryableAPIError, PermanentAPIError) as exc:
         # The reviewer itself failed (transport/auth/rate-limit), so the
         # translation was never judged. That is a reviewer failure, NOT a
@@ -2176,6 +2181,21 @@ def review_roman_urdu_translation(
             "style_suggestions": [],
             "feedback": "Semantic reviewer API failure; translation quality was not judged.",
             "review_error": "reviewer_api_failure",
+        }
+    except Exception as exc:
+        # Response extraction and parsing must be fail-closed as well.  Treat
+        # an unexpected response shape as a reviewer failure so the caller
+        # retries this review, rather than regenerating an already-valid
+        # translation.
+        print(f"⚠️ Semantic reviewer response failure: {_safe_error_text(exc)}")
+        review = {
+            "passed": False,
+            "score": 0,
+            "critical_issues": [],
+            "semantic_errors": [],
+            "style_suggestions": [],
+            "feedback": "Semantic reviewer response could not be processed; translation quality was not judged.",
+            "review_error": "reviewer_response_failure",
         }
     deterministic_score = deterministic.get("score", 0)
     review_error = bool(review.get("review_error"))

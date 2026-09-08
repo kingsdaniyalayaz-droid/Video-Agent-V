@@ -100,3 +100,30 @@ def test_reviewer_errors_exhaust_reviewer_attempts_without_translation_retry():
 
     assert calls.count("Translation API") == 1
     assert calls.count("semantic review") == 3
+
+
+def test_reviewer_rate_limit_keeps_rate_limit_error_contract():
+    calls: list[str] = []
+
+    def invoke(_llm, _messages, *, operation_name, **_kwargs):
+        calls.append(operation_name)
+        if operation_name == "Translation API":
+            return SimpleNamespace(content="Yeh aik durust tarjuma hai")
+        raise translator.RateLimitError("reviewer rate-limited", retry_after=17)
+
+    with (
+        patch.object(translator, "_invoke_llm_with_retries", side_effect=invoke),
+        patch.object(translator, "validate_roman_urdu_quality", side_effect=_deterministic_pass),
+        patch.object(translator, "_restore_chunk_timestamps", side_effect=lambda _source, text: text),
+        pytest.raises(translator.TranslationPipelineError) as error,
+    ):
+        translator.translate_chunk(
+            "This is a source chunk.", llm=object(), reviewer_llm=object(),
+            api_max_attempts=1, semantic_review_max_attempts=3,
+            retry_delay=0, sleeper=lambda _delay: None,
+        )
+
+    assert error.value.rate_limited is True
+    assert error.value.retry_after == 17
+    assert calls.count("Translation API") == 1
+    assert calls.count("semantic review") == 1
