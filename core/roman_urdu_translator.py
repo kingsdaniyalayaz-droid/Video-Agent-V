@@ -38,6 +38,14 @@ MISTRAL_MAX_RETRIES = 0            # Shared _invoke_llm_with_retries owns retrie
 
 API_MAX_ATTEMPTS = 5
 QUALITY_MAX_ATTEMPTS = 3
+try:
+    SEMANTIC_REVIEW_MAX_ATTEMPTS = int(
+        os.getenv("SEMANTIC_REVIEW_MAX_ATTEMPTS", "3")
+    )
+except ValueError:
+    SEMANTIC_REVIEW_MAX_ATTEMPTS = 3
+if SEMANTIC_REVIEW_MAX_ATTEMPTS < 1:
+    SEMANTIC_REVIEW_MAX_ATTEMPTS = 3
 API_BASE_DELAY = 3.0
 API_MAX_DELAY = 120.0
 QUALITY_RETRY_DELAY = 1.0
@@ -2133,6 +2141,7 @@ def review_roman_urdu_translation(
             "style_suggestions": [str(item) for item in deterministic.get("minor_issues", [])],
             "feedback": str(deterministic.get("feedback") or "Deterministic validation failed."),
             "semantic_passed": False,
+            "review_unavailable": False,
             "needs_retry": True,
         }
 
@@ -2145,14 +2154,31 @@ def review_roman_urdu_translation(
     print(f"CANDIDATE LENGTH: {len(candidate_for_review)}")
     print("------------------------------------------------------------")
     print("🤖 Running semantic review")
-    response = _invoke_llm_with_retries(
-        client,
-        _review_messages(source, candidate_for_review),
-        operation_name="semantic review",
-        max_attempts=api_attempts,
-    )
-    review = _normalize_reviewer_verdict(_parse_review(response))
+    try:
+        response = _invoke_llm_with_retries(
+            client,
+            _review_messages(source, candidate_for_review),
+            operation_name="semantic review",
+            max_attempts=api_attempts,
+        )
+        review = _normalize_reviewer_verdict(_parse_review(response))
+    except (RetryableAPIError, PermanentAPIError) as exc:
+        # The reviewer itself failed (transport/auth/rate-limit), so the
+        # translation was never judged. That is a reviewer failure, NOT a
+        # semantic translation failure: a deterministic-validated translation
+        # must not be regenerated merely because the reviewer was unreachable.
+        print(f"⚠️ Semantic reviewer API failure: {_safe_error_text(exc)}")
+        review = {
+            "passed": False,
+            "score": 0,
+            "critical_issues": [],
+            "semantic_errors": [],
+            "style_suggestions": [],
+            "feedback": "Semantic reviewer API failure; translation quality was not judged.",
+            "review_error": "reviewer_api_failure",
+        }
     deterministic_score = deterministic.get("score", 0)
+    review_error = bool(review.get("review_error"))
     categories = _review_categories(review)
     semantic_issues = categories["semantic_errors"]
     reviewer_critical_issues = categories["critical_issues"]
@@ -2165,13 +2191,18 @@ def review_roman_urdu_translation(
         bool(deterministic.get("passed"))
         and not _contains_non_latin_alphabetic(translation)
     )
+    # Whether the semantic review EXPLICITLY passed the translation.
     review_passed = (
-        not review.get("review_error")
+        not review_error
         and deterministic_is_sound
         and bool(review.get("passed"))
         and not combined_critical_issues
         and not semantic_issues
     )
+    # A reviewer failure is not a semantic verdict on the translation. The
+    # caller retries the reviewer against this same deterministic-valid output.
+    review_unavailable = review_error and deterministic_is_sound
+    accepted = review_passed
     review["critical_issues"] = combined_critical_issues
     review["semantic_errors"] = semantic_issues
     review["style_suggestions"] = combined_minor_issues
@@ -2183,25 +2214,34 @@ def review_roman_urdu_translation(
     # combined_score remains separately available for observability.
     review["score"] = semantic_score
     review["semantic_passed"] = review_passed
-    review["passed"] = review_passed
+    review["review_unavailable"] = review_unavailable
+    review["passed"] = accepted
+    # A reviewer failure alone never forces a translation regeneration.
     review["needs_retry"] = (
-        bool(review.get("review_error"))
-        or not review_passed
+        not accepted
         or bool(combined_critical_issues)
         or bool(semantic_issues)
     )
     if combined_critical_issues:
         review["feedback"] = "; ".join(filter(None, [review.get("feedback", ""), *combined_critical_issues]))
-    semantic_verdict = (
-        "FAIL" if not review_passed else
-        "STYLE_WARNING" if combined_minor_issues else
-        "PASS"
-    )
-    print(f"🤖 Semantic Verdict: {semantic_verdict}")
-    print(f"🤖 Semantic Score: {semantic_score}/100")
-    print(f"🤖 Semantic Issues: {semantic_issues or 'none'}")
-    print(f"🤖 Style Issues: {combined_minor_issues or 'none'}")
-    print(f"📊 Combined Diagnostic Score: {combined_score}/100")
+    if review_unavailable:
+        semantic_verdict = "UNAVAILABLE"
+    else:
+        semantic_verdict = (
+            "FAIL" if not review_passed else
+            "STYLE_WARNING" if combined_minor_issues else
+            "PASS"
+        )
+    if review_unavailable:
+        print(f"⚠️ Semantic Review: UNAVAILABLE ({review_error})")
+        print("🤖 Semantic Review: UNAVAILABLE -- translation was not semantically judged")
+        print("🤖 Semantic Score: n/a (reviewer response empty, malformed, or unreachable)")
+    else:
+        print(f"🤖 Semantic Verdict: {semantic_verdict}")
+        print(f"🤖 Semantic Score: {semantic_score}/100")
+        print(f"🤖 Semantic Issues: {semantic_issues or 'none'}")
+        print(f"🤖 Style Issues: {combined_minor_issues or 'none'}")
+        print(f"📊 Combined Diagnostic Score: {combined_score}/100")
     retry_decision = "required" if review["needs_retry"] else "not required"
     print(f"🔁 Retry decision: {retry_decision}")
     return review
@@ -2395,6 +2435,7 @@ def translate_chunk(
     quality_retry_delay: float | None = None,
     max_quality_retries: int | None = None,
     api_max_attempts: int = API_MAX_ATTEMPTS,
+    semantic_review_max_attempts: int = SEMANTIC_REVIEW_MAX_ATTEMPTS,
     sleeper: Callable[[float], None] = time.sleep,
     reviewer_llm: Any | None = None,
 ) -> str:
@@ -2431,6 +2472,12 @@ def translate_chunk(
         raise ValueError("max_retries must be a positive integer")
     if not isinstance(api_max_attempts, int) or isinstance(api_max_attempts, bool) or api_max_attempts < 1:
         raise ValueError("api_max_attempts must be a positive integer")
+    if (
+        not isinstance(semantic_review_max_attempts, int)
+        or isinstance(semantic_review_max_attempts, bool)
+        or semantic_review_max_attempts < 1
+    ):
+        raise ValueError("semantic_review_max_attempts must be a positive integer")
     delay = retry_delay if quality_retry_delay is None else quality_retry_delay
     if delay < 0:
         raise ValueError("quality retry delay must be non-negative")
@@ -2574,13 +2621,29 @@ def translate_chunk(
 
             # Semantic review runs only after deterministic validation passes.
             if deterministic["passed"]:
-                review = review_roman_urdu_translation(
-                    chunk,
-                    translated,
-                    reviewer_llm,
-                    api_attempts=api_max_attempts,
-                    deterministic_result=deterministic,
-                )
+                for review_attempt in range(1, semantic_review_max_attempts + 1):
+                    review = review_roman_urdu_translation(
+                        chunk,
+                        translated,
+                        reviewer_llm,
+                        api_attempts=api_max_attempts,
+                        deterministic_result=deterministic,
+                    )
+                    if not review.get("review_error"):
+                        break
+                    print(
+                        "⚠️ Semantic reviewer returned an invalid response "
+                        f"(attempt {review_attempt}/{semantic_review_max_attempts})."
+                    )
+                    if review_attempt < semantic_review_max_attempts:
+                        print("🔁 Retrying semantic reviewer with the same translation")
+                        sleeper(delay)
+                else:
+                    raise TranslationPipelineError(
+                        "Semantic reviewer failed after "
+                        f"{semantic_review_max_attempts} attempts; "
+                        "the translation was not semantically approved."
+                    )
 
                 critical_issues = [str(item) for item in (review.get("critical_issues") or [])]
                 semantic_errors = [str(item) for item in (review.get("semantic_errors") or [])]
@@ -2649,6 +2712,8 @@ def translate_chunk(
                 f"Chunk {chunk_number} API failure at quality attempt "
                 f"{quality_attempt}/{quality_attempt_limit}: {exc}",
             ) from exc
+        except TranslationPipelineError:
+            raise
         except Exception as exc:
             failure_type = "api"
             last_error = exc
@@ -2772,6 +2837,7 @@ __all__ = [
     "MISTRAL_API_KEY_ENV",
     "MISTRAL_TIMEOUT",
     "MISTRAL_MAX_RETRIES",
+    "SEMANTIC_REVIEW_MAX_ATTEMPTS",
     "MISTRAL_MAX_TOKENS",
     "PermanentAPIError",
     "RetryableAPIError",
