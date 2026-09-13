@@ -68,6 +68,11 @@ CHUNK_DIR.mkdir(parents=True, exist_ok=True)
 
 # YouTube cookie file
 DEFAULT_COOKIE_FILE = BASE_DIR / "cookies.txt"
+ALLOWED_COOKIE_DIRS = {
+    BASE_DIR,
+    BASE_DIR / "secrets",
+    BASE_DIR / "config"
+}
 
 
 # Audio configuration for Whisper
@@ -304,29 +309,50 @@ def normalize_url(url: str) -> str:
 
 def get_cookie_file() -> Optional[Path]:
     """
-    Locate YouTube cookies.
-
-    Priority:
-
-        YOUTUBE_COOKIES environment variable
-        cookies.txt in project root
+    Locate and securely validate YouTube cookies.
     """
-
-    env_cookie = os.getenv(
-        "YOUTUBE_COOKIES"
-    )
-
+    candidates = []
+    
+    env_cookie = os.getenv("YOUTUBE_COOKIES")
     if env_cookie:
+        candidates.append(Path(env_cookie).expanduser())
+        
+    candidates.append(DEFAULT_COOKIE_FILE)
 
-        path = Path(
-            env_cookie
-        ).expanduser()
+    for path in candidates:
+        if not path.exists():
+            continue
 
-        if path.exists():
-            return path
+        if path.is_symlink():
+            continue
 
-    if DEFAULT_COOKIE_FILE.exists():
-        return DEFAULT_COOKIE_FILE
+        try:
+            resolved_path = path.resolve(strict=True)
+        except Exception:
+            continue
+
+        if not any(resolved_path.is_relative_to(base) for base in ALLOWED_COOKIE_DIRS):
+            continue
+
+        name = resolved_path.name.lower()
+        if name == ".env" or name == "api_keys_vault.json":
+            continue
+
+        ext = resolved_path.suffix.lower()
+        if ext in {".json", ".key", ".pem"}:
+            continue
+
+        if ext != ".txt":
+            continue
+
+        if not resolved_path.is_file():
+            continue
+
+        size = resolved_path.stat().st_size
+        if size <= 0 or size > 1024 * 1024:
+            continue
+
+        return resolved_path
 
     return None
 
@@ -430,7 +456,7 @@ def build_youtube_options(
 
         log(
             f"Using YouTube cookie file:\n"
-            f"{cookie_file}"
+            f"{cookie_file.name}"
         )
 
     else:
@@ -1517,7 +1543,7 @@ if __name__ == "__main__":
 
     print(
         f"\nYouTube cookies:\n"
-        f"{cookies or 'NOT FOUND'}"
+        f"{cookies.name if cookies else 'NOT FOUND'}"
     )
 
     print(
