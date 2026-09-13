@@ -4660,10 +4660,8 @@ def process_source(
             if failed_stage in stage_state:
                 stage_state[failed_stage]["state"] = "failed"
                 stage_state[failed_stage]["message"] = "Failed"
-            shown_message = friendly_llm_error(final_error) or (
-                "⚠️ Something went wrong while processing your request.\n\n"
-                "Please try again. If the problem continues, check your application settings."
-            )
+            shown_message = friendly_llm_error(final_error) or f"⚠️ Error: {final_error}"
+            print(f"\n[PIPELINE_ERROR] {final_error}\n")
             update_processing_display(error_message=shown_message)
             raise final_error
 

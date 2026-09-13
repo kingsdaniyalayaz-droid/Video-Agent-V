@@ -1179,7 +1179,7 @@ def chunk_audio(
         for generated_chunk in generated_chunks:
             final_chunk = output_dir / generated_chunk.name
             if final_chunk.exists():
-                raise RuntimeError(f"Refusing to overwrite existing chunk: {final_chunk.name}")
+                final_chunk.unlink(missing_ok=True)  # Purana chunk hata kar naya banayein
             generated_chunk.replace(final_chunk)
             chunks.append(final_chunk)
             created_chunks.append(final_chunk)

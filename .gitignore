@@ -60,3 +60,6 @@ Thumbs.db
 .idea/
 
 .env
+
+api_keys_vault.json
+*vault*.json

@@ -1,0 +1,6 @@
+{
+  "vault_pool": {
+    "api_key": "YOUR_API_KEY_HERE",
+    "base_url": "https://api.example.com/v1"
+  }
+}

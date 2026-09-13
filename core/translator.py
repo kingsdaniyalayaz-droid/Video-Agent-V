@@ -26,6 +26,7 @@ Uses:
 """
 
 from __future__ import annotations
+import os
 
 import re
 import time
@@ -35,6 +36,7 @@ from dotenv import load_dotenv
 from core.llm_provider import get_chat_model, get_runtime_config
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 # ============================================================
@@ -48,7 +50,8 @@ load_dotenv()
 # CONFIGURATION
 # ============================================================
 
-TRANSLATION_CHUNK_SIZE = 5000
+TRANSLATION_TOKEN_CHUNK_SIZE = int(os.getenv("TRANSLATION_TOKEN_CHUNK_SIZE", "1200"))
+TRANSLATION_CHAR_CHUNK_SIZE = int(os.getenv("TRANSLATION_CHAR_CHUNK_SIZE", "3500"))
 
 # Maximum number of retries after the initial request attempt.
 TRANSLATION_MAX_RETRIES = 3
@@ -282,55 +285,29 @@ def get_translation_chain():
 # ============================================================
 def _split_text_into_chunks(
     text: str,
-    max_chars: int = TRANSLATION_CHUNK_SIZE,
 ) -> list[str]:
     """
     Split text into ordered chunks without dropping or duplicating content.
-
-    Natural boundaries are preferred in this order: paragraph, newline,
-    sentence, whitespace, and finally a hard character boundary.
     """
-    if max_chars <= 0:
-        raise ValueError("max_chars must be greater than zero.")
     if not text:
         return []
 
-    chunks: list[str] = []
-    remaining = text
+    try:
+        splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            encoding_name="cl100k_base",
+            chunk_size=TRANSLATION_TOKEN_CHUNK_SIZE,
+            chunk_overlap=0,
+            separators=["\n\n", "\n", ". ", "? ", "! ", " ", ""],
+        )
+    except Exception as e:
+        print(f"⚠️ Tiktoken encoder not available ({e}). Falling back to char splitter.")
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=TRANSLATION_CHAR_CHUNK_SIZE,
+            chunk_overlap=0,
+            separators=["\n\n", "\n", ". ", "? ", "! ", " ", ""],
+        )
 
-    while len(remaining) > max_chars:
-        window = remaining[:max_chars]
-        split_at = window.rfind(chr(10) * 2)
-        if split_at >= 0:
-            split_at += 2
-        else:
-            split_at = window.rfind(chr(10))
-            if split_at >= 0:
-                split_at += 1
-
-        if split_at <= 0:
-            sentence_matches = list(
-                re.finditer(
-                    r'''[.!?؟。！？](?:["'’”)]*)[ \t\r\n]+''',
-                    window,
-                )
-            )
-            if sentence_matches:
-                split_at = sentence_matches[-1].end()
-
-        if split_at <= 0:
-            whitespace_matches = list(re.finditer(r'''[ \t\r\n]+''', window))
-            if whitespace_matches:
-                split_at = whitespace_matches[-1].end()
-
-        if split_at <= 0:
-            split_at = max_chars
-
-        chunks.append(remaining[:split_at])
-        remaining = remaining[split_at:]
-
-    if remaining:
-        chunks.append(remaining)
+    chunks = splitter.split_text(text)
     return chunks
 
 
@@ -550,8 +527,7 @@ def translate_text(
     # --------------------------------------------------------
 
     chunks = _split_text_into_chunks(
-        text.strip(),
-        TRANSLATION_CHUNK_SIZE,
+        text.strip()
     )
     total_chunks = len(chunks)
 

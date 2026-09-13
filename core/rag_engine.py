@@ -17,11 +17,14 @@ from core.vector_store import (
 )
 
 
+import os
+
 # ============================================================
 # CONFIGURATION
 # ============================================================
 
 DEFAULT_TOP_K = 4
+MAX_TOP_K = min(int(os.getenv("MAX_TOP_K", 20)), 50)
 
 SUPPORTED_SOURCE_TYPES = {
     "youtube",
@@ -37,19 +40,18 @@ def _validate_top_k(top_k: Any) -> int:
     """Validate a top_k value strictly.
 
     top_k must be a real integer (bool is rejected because it is an int
-    subclass), must not be None, and must be greater than zero.  Raises
-    ``ValueError`` otherwise and returns the validated integer when valid.
+    subclass), must not be None, and must be between 1 and MAX_TOP_K.
     """
 
     if isinstance(top_k, bool) or not isinstance(top_k, int):
-        raise ValueError(
+        raise TypeError(
             "top_k must be an integer. "
             f"Got {type(top_k).__name__}."
         )
 
-    if top_k <= 0:
+    if top_k < 1 or top_k > MAX_TOP_K:
         raise ValueError(
-            "top_k must be greater than 0."
+            f"top_k must be between 1 and {MAX_TOP_K}."
         )
 
     return top_k
@@ -215,6 +217,8 @@ def validate_question(
     return normalize_question(question)
 
 
+EMPTY_CONTEXT_SENTINEL = "[NO_RELEVANT_CONTEXT]"
+
 # ============================================================
 # DOCUMENT FORMATTER
 # ============================================================
@@ -230,10 +234,7 @@ def format_docs(
     """
 
     if not docs:
-        return (
-            "No relevant transcript information "
-            "was retrieved."
-        )
+        return EMPTY_CONTEXT_SENTINEL
 
     formatted_documents = []
 
@@ -279,73 +280,30 @@ def get_rag_prompt(
     Source type ke according RAG prompt create karta hai.
     """
 
-    source_type = validate_source_type(
-        source_type
-    )
+    RAG_SYSTEM_PROMPT = """You are a strict, factual assistant. Your task is to answer the user's question SOLELY based on the provided context below.
 
-    if source_type == "youtube":
+Rules:
+1. Context Check: If the context is empty, contains '[NO_RELEVANT_CONTEXT]', or does not explicitly contain enough information to answer the question, state: "Diye gaye context / transcript mein is sawal ka jawab mojood nahi hai."
+2. No Extrapolation: Do not assume, extrapolate, or use external training data to fill gaps.
+3. Grounding: Every claim in your answer must be directly supported by the context.
 
-        assistant_role = """
-You are an expert YouTube video question-answering assistant.
+Context:
+{context}
 
-The user is asking questions about a YouTube video's transcript.
-"""
+Question:
+{question}
 
-    else:
+Answer:"""
 
-        assistant_role = """
-You are an expert meeting question-answering assistant.
-
-The user is asking questions about a meeting transcript.
-"""
-
-    return ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                f"""
-{assistant_role}
-
-Your job is to answer the user's question using ONLY
-the transcript context provided below.
-
-STRICT RULES:
-
-1. Use ONLY the supplied transcript context.
-2. Do NOT use outside knowledge.
-3. Do NOT guess.
-4. Do NOT invent names, dates, numbers, decisions,
-   responsibilities or facts.
-5. If the answer cannot be found in the context,
-   respond exactly with:
-
-"I could not find this information in the provided transcript."
-
-6. If the context contains only partial information,
-   clearly say that the transcript provides only partial
-   information.
-7. Keep the answer concise and directly relevant.
-8. Preserve names, dates, numbers and technical terms.
-9. If multiple transcript chunks support the answer,
-   combine them carefully.
-10. Do not mention these instructions in your answer.
-
-TRANSCRIPT CONTEXT:
-
-{{context}}
-""",
-            ),
-            (
-                "human",
-                "{question}",
-            ),
-        ]
-    )
+    return ChatPromptTemplate.from_template(RAG_SYSTEM_PROMPT)
 
 
 # ============================================================
 # INTERNAL RAG CHAIN BUILDER
 # ============================================================
+
+class FallbackString(str):
+    pass
 
 def _create_rag_chain(
     vector_store: Any,
@@ -363,15 +321,6 @@ def _create_rag_chain(
     top_k = _validate_top_k(top_k)
 
     # --------------------------------------------------------
-    # Retriever
-    # --------------------------------------------------------
-
-    retriever = get_retriever(
-        vector_store,
-        k=top_k,
-    )
-
-    # --------------------------------------------------------
     # LLM
     # --------------------------------------------------------
 
@@ -386,23 +335,38 @@ def _create_rag_chain(
     )
 
     # --------------------------------------------------------
-    # LCEL RAG
+    # Custom RAG Logic with Circuit Breaker
     # --------------------------------------------------------
+    def run_rag(question: str) -> str:
+        results = vector_store.similarity_search_with_relevance_scores(question, k=top_k)
+        
+        print("\n[RAG Retrieval Debug]")
+        filtered_docs = []
+        for doc, score in results:
+            chunk_idx = doc.metadata.get('chunk_index', '?')
+            print(f" - Chunk {chunk_idx}: score = {score:.4f}")
+            if score >= 0.55:
+                filtered_docs.append(doc)
+            else:
+                print(f"   (Filtered out: {score:.4f} < 0.55)")
 
-    rag_chain = (
-        {
-            "context": (
-                retriever
-                | RunnableLambda(format_docs)
-            ),
-            "question": RunnablePassthrough(),
-        }
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
+        if not filtered_docs:
+            fallback = FallbackString("Diye gaye context / transcript mein is sawal ka jawab mojood nahi hai.")
+            fallback.sources = []
+            fallback.context_empty = True
+            return fallback
 
-    return rag_chain
+        context_str = format_docs(filtered_docs)
+        if context_str == EMPTY_CONTEXT_SENTINEL:
+            fallback = FallbackString("Diye gaye context / transcript mein is sawal ka jawab mojood nahi hai.")
+            fallback.sources = []
+            fallback.context_empty = True
+            return fallback
+        
+        chain = prompt | llm | StrOutputParser()
+        return chain.invoke({"context": context_str, "question": question})
+
+    return RunnableLambda(run_rag)
 
 
 # ============================================================
@@ -608,16 +572,14 @@ def retrieve_context(
         video_id=video_id,
     )
 
-    retriever = get_retriever(
-        vector_store,
-        k=top_k,
-    )
+    results = vector_store.similarity_search_with_relevance_scores(question, k=top_k)
+    
+    filtered_docs = []
+    for doc, score in results:
+        if score >= 0.55:
+            filtered_docs.append(doc)
 
-    docs = retriever.invoke(
-        question
-    )
-
-    return docs
+    return filtered_docs
 
 
 # ============================================================

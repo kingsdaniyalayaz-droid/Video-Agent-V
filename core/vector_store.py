@@ -68,17 +68,33 @@ EMBEDDING_MODEL = os.getenv(
 )
 
 
-CHUNK_SIZE = int(
+TOKEN_CHUNK_SIZE = int(
     os.getenv(
-        "RAG_CHUNK_SIZE",
-        "500",
+        "RAG_TOKEN_CHUNK_SIZE",
+        "250",
     )
 )
 
 
-CHUNK_OVERLAP = int(
+TOKEN_CHUNK_OVERLAP = int(
     os.getenv(
-        "RAG_CHUNK_OVERLAP",
+        "RAG_TOKEN_CHUNK_OVERLAP",
+        "30",
+    )
+)
+
+
+CHAR_CHUNK_SIZE = int(
+    os.getenv(
+        "RAG_CHAR_CHUNK_SIZE",
+        "750",
+    )
+)
+
+
+CHAR_CHUNK_OVERLAP = int(
+    os.getenv(
+        "RAG_CHAR_CHUNK_OVERLAP",
         "50",
     )
 )
@@ -90,6 +106,7 @@ DEFAULT_TOP_K = int(
         "4",
     )
 )
+MAX_TOP_K = min(int(os.getenv("MAX_TOP_K", 20)), 50)
 
 
 # ============================================================
@@ -210,19 +227,18 @@ def _validate_k(k: Any) -> int:
     """Validate a retriever/search k value strictly.
 
     k must be a real integer (bool is rejected because it is an int
-    subclass), must not be None, and must be greater than zero.  Raises
-    ``ValueError`` otherwise and returns the validated integer when valid.
+    subclass), must not be None, and must be between 1 and MAX_TOP_K.
     """
 
     if isinstance(k, bool) or not isinstance(k, int):
-        raise ValueError(
+        raise TypeError(
             "k must be an integer. "
             f"Got {type(k).__name__}."
         )
 
-    if k <= 0:
+    if k < 1 or k > MAX_TOP_K:
         raise ValueError(
-            "k must be greater than 0."
+            f"k must be between 1 and {MAX_TOP_K}."
         )
 
     return k
@@ -352,26 +368,27 @@ def split_transcript(
         transcript
     )
 
-    if CHUNK_OVERLAP >= CHUNK_SIZE:
-
-        raise ValueError(
-            "CHUNK_OVERLAP must be smaller "
-            "than CHUNK_SIZE."
+    try:
+        if TOKEN_CHUNK_OVERLAP >= TOKEN_CHUNK_SIZE:
+            raise ValueError("TOKEN_CHUNK_OVERLAP must be smaller than TOKEN_CHUNK_SIZE.")
+        
+        splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            encoding_name="cl100k_base",
+            chunk_size=TOKEN_CHUNK_SIZE,
+            chunk_overlap=TOKEN_CHUNK_OVERLAP,
+            separators=["\n\n", "\n", ". ", "? ", "! ", " ", ""],
         )
-
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP,
-        separators=[
-            "\n\n",
-            "\n",
-            ". ",
-            "? ",
-            "! ",
-            " ",
-            "",
-        ],
-    )
+    except Exception as e:
+        print(f"⚠️ Tiktoken encoder not available ({e}). Falling back to char splitter.")
+        
+        if CHAR_CHUNK_OVERLAP >= CHAR_CHUNK_SIZE:
+            raise ValueError("CHAR_CHUNK_OVERLAP must be smaller than CHAR_CHUNK_SIZE.")
+        
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=CHAR_CHUNK_SIZE,
+            chunk_overlap=CHAR_CHUNK_OVERLAP,
+            separators=["\n\n", "\n", ". ", "? ", "! ", " ", ""],
+        )
 
     chunks = splitter.split_text(
         transcript
@@ -1267,11 +1284,11 @@ if __name__ == "__main__":
     )
 
     print(
-        f"Chunk size       : {CHUNK_SIZE}"
+        f"Token Chunk size : {TOKEN_CHUNK_SIZE}"
     )
 
     print(
-        f"Chunk overlap    : {CHUNK_OVERLAP}"
+        f"Token overlap    : {TOKEN_CHUNK_OVERLAP}"
     )
 
     print(

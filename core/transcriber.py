@@ -153,78 +153,26 @@ def get_device_info() -> dict:
 # ============================================================
 
 def print_device_info() -> None:
-    """
-    Display Whisper runtime information.
-    """
-
+    """Display Whisper runtime information."""
     print("\n" + "=" * 70)
     print("                  WHISPER ENGINE")
     print("=" * 70)
-
-    print(
-        f"ðŸ–¥ï¸ Device       : {DEVICE}"
-    )
-
-    print(
-        f"ðŸ“¦ Model        : {WHISPER_MODEL}"
-    )
-
-    print(
-        f"ðŸŒ Language     : {WHISPER_LANGUAGE}"
-    )
-
+    print(f"Device        : {DEVICE}")
+    print(f"Model         : {WHISPER_MODEL}")
+    print(f"Language      : {WHISPER_LANGUAGE}")
     if DEVICE == "cuda":
-
-        print(
-            f"ðŸŽ® GPU          : "
-            f"{torch.cuda.get_device_name(0)}"
-        )
-
-        print(
-            f"ðŸ”¥ CUDA         : "
-            f"{torch.version.cuda}"
-        )
-
         try:
-
-            props = (
-                torch.cuda.get_device_properties(0)
-            )
-
-            vram_gb = (
-                props.total_memory
-                / (1024 ** 3)
-            )
-
-            print(
-                f"ðŸ’¾ VRAM         : "
-                f"{vram_gb:.2f} GB"
-            )
-
+            print(f"GPU           : {torch.cuda.get_device_name(0)}")
+            print(f"CUDA          : {torch.version.cuda}")
+            props = torch.cuda.get_device_properties(0)
+            vram_gb = props.total_memory / (1024 ** 3)
+            print(f"VRAM          : {vram_gb:.2f} GB")
         except Exception:
             pass
-
-        print(
-            f"âš¡ Precision     : "
-            f"{'FP16' if WHISPER_FP16 else 'FP32'}"
-        )
-
+        print(f"Precision     : {"FP16" if WHISPER_FP16 else "FP32"}")
     else:
-
-        print(
-            "âš ï¸ CUDA          : Unavailable"
-        )
-
-        print(
-            "âš¡ Precision     : FP32"
-        )
-
-    print("=" * 70)
-
-
-# ============================================================
-# INITIAL DEVICE DISPLAY
-# ============================================================
+        print("CUDA          : Unavailable")
+        print("Precision     : FP32")
 
 print_device_info()
 

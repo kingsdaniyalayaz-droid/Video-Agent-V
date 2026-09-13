@@ -116,20 +116,36 @@ load_dotenv()
 # Legacy environment defaults (optional -- no fixed provider is required)
 # ---------------------------------------------------------------------------
 
+def _env_float(name: str, default: float) -> float:
+    try:
+        val = os.getenv(name)
+        return float(val) if val else default
+    except (ValueError, TypeError):
+        return default
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        val = os.getenv(name)
+        return int(val) if val else default
+    except (ValueError, TypeError):
+        return default
+
+
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "").strip()
 MISTRAL_MODEL = os.getenv("MISTRAL_MODEL", "mistral-small-latest").strip()
-MISTRAL_TEMPERATURE = float(os.getenv("MISTRAL_TEMPERATURE", "0.2"))
-MISTRAL_TIMEOUT = float(os.getenv("MISTRAL_TIMEOUT", "120.0"))
-MISTRAL_MAX_RETRIES = int(os.getenv("MISTRAL_MAX_RETRIES", "0"))
-MISTRAL_MAX_TOKENS = int(os.getenv("MISTRAL_MAX_TOKENS", "2048"))
+MISTRAL_TEMPERATURE = _env_float("MISTRAL_TEMPERATURE", 0.2)
+MISTRAL_TIMEOUT = _env_float("MISTRAL_TIMEOUT", 120.0)
+MISTRAL_MAX_RETRIES = _env_int("MISTRAL_MAX_RETRIES", 0)
+MISTRAL_MAX_TOKENS = _env_int("MISTRAL_MAX_TOKENS", 2048)
 
 FALLBACK_PROVIDER = os.getenv("FALLBACK_PROVIDER", "").strip().lower()
 FALLBACK_API_KEY = os.getenv("FALLBACK_API_KEY", "").strip()
 FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "").strip()
 FALLBACK_BASE_URL = os.getenv("FALLBACK_BASE_URL", "").strip() or None
-FALLBACK_TEMPERATURE = float(os.getenv("FALLBACK_TEMPERATURE", "0.2"))
-FALLBACK_TIMEOUT = float(os.getenv("FALLBACK_TIMEOUT", "120.0"))
-FALLBACK_MAX_RETRIES = int(os.getenv("FALLBACK_MAX_RETRIES", "0"))
+FALLBACK_TEMPERATURE = _env_float("FALLBACK_TEMPERATURE", 0.2)
+FALLBACK_TIMEOUT = _env_float("FALLBACK_TIMEOUT", 120.0)
+FALLBACK_MAX_RETRIES = _env_int("FALLBACK_MAX_RETRIES", 0)
 
 # Reasonable per-provider defaults used only when FALLBACK_MODEL is unset.
 _DEFAULT_FALLBACK_MODELS: dict[str, str] = {
@@ -400,7 +416,7 @@ def _extract_retry_after(exc: Optional[BaseException]) -> Optional[float]:
         if hasattr(headers, "get"):
             raw = headers.get("Retry-After") or headers.get("retry-after")
             if raw is not None:
-                return min(float(str(raw).strip()), 120.0)
+                return float(str(raw).strip())
     except (TypeError, ValueError):
         return None
     return None
@@ -1343,7 +1359,8 @@ def get_chat_model(model: Optional[str] = None,
                    api_key: Optional[str] = None,
                    base_url: Optional[str] = None,
                    provider: Optional[str] = None,
-                   config: Optional[LLMConfig] = None) -> FailoverChatModel:
+                   config: Optional[LLMConfig] = None,
+                   timeout: Optional[float] = None) -> FailoverChatModel:
     """Return the centralized, LangChain-compatible chat model.
 
     Resolution order:
@@ -1363,11 +1380,21 @@ def get_chat_model(model: Optional[str] = None,
     if not _status_printed:
         print_provider_status()
 
+    # --- Master Auto-Pool Hook (18 Slots Vault) ---
+    req_model = model or (config.model if config else None) or os.getenv("ACTIVE_MODEL")
+    if req_model == "master-auto-pool":
+        from core.vault_pool import get_vault_pool_model
+        return get_vault_pool_model(
+            temperature=temperature if temperature is not None else 0.2,
+            timeout=timeout or 30.0
+        )
+
     if config is not None:
         active = validate_config(config)
     else:
         active = _resolve_active_config(
             model=model, temperature=temperature, max_tokens=max_tokens,
+            timeout=timeout,
             response_format=response_format, api_key=api_key,
             base_url=base_url, provider=provider,
         )
@@ -1384,7 +1411,7 @@ def get_chat_model(model: Optional[str] = None,
 
 
 def _resolve_active_config(*, model: Optional[str], temperature: Optional[float],
-                           max_tokens: Optional[int],
+                           max_tokens: Optional[int], timeout: Optional[float],
                            response_format: Optional[dict],
                            api_key: Optional[str], base_url: Optional[str],
                            provider: Optional[str]) -> LLMConfig:
@@ -1419,6 +1446,7 @@ def _resolve_active_config(*, model: Optional[str], temperature: Optional[float]
                 runtime,
                 temperature=temperature if temperature is not None else runtime.temperature,
                 max_tokens=max_tokens if max_tokens is not None else runtime.max_tokens,
+                timeout=timeout if timeout is not None else runtime.timeout,
                 response_format=response_format if response_format is not None else runtime.response_format,
             ))
 
@@ -1439,16 +1467,16 @@ def _resolve_active_config(*, model: Optional[str], temperature: Optional[float]
         # provider this call will actually use, so a wrong key is never
         # sent to an API.
         if eff_provider is not None and eff_provider != runtime.provider:
-            eff_key = api_key if api_key is not None else ""
-            eff_base = base_url if base_url is not None else None
+            eff_key = api_key if api_key is not None else os.getenv(f"{eff_provider.upper()}_API_KEY", "")
+            eff_base = base_url if base_url is not None else _default_base_url_for(eff_provider)
         elif eff_provider is None:
             try:
                 detected = resolve_provider(eff_model, None, eff_base)
             except UnsupportedProviderError:
                 detected = None
             if detected != runtime.provider:
-                eff_key = api_key if api_key is not None else ""
-                eff_base = base_url if base_url is not None else None
+                eff_key = api_key if api_key is not None else (os.getenv(f"{detected.upper()}_API_KEY", "") if detected else "")
+                eff_base = base_url if base_url is not None else (_default_base_url_for(detected) if detected else None)
 
         return validate_config(replace(
             runtime,
@@ -1456,6 +1484,7 @@ def _resolve_active_config(*, model: Optional[str], temperature: Optional[float]
             api_key=eff_key,
             temperature=temperature if temperature is not None else runtime.temperature,
             max_tokens=max_tokens if max_tokens is not None else runtime.max_tokens,
+            timeout=timeout if timeout is not None else runtime.timeout,
             base_url=eff_base,
             response_format=response_format if response_format is not None else runtime.response_format,
             provider=eff_provider,
@@ -1470,7 +1499,7 @@ def _resolve_active_config(*, model: Optional[str], temperature: Optional[float]
         api_key=api_key if api_key is not None else MISTRAL_API_KEY,
         temperature=temperature if temperature is not None else MISTRAL_TEMPERATURE,
         max_tokens=max_tokens,
-        timeout=MISTRAL_TIMEOUT,
+        timeout=timeout if timeout is not None else MISTRAL_TIMEOUT,
         max_retries=MISTRAL_MAX_RETRIES,
         base_url=base_url,
         response_format=response_format,
@@ -1486,9 +1515,11 @@ def get_llm(model: Optional[str] = None,
             api_key: Optional[str] = None,
             base_url: Optional[str] = None,
             provider: Optional[str] = None,
-            config: Optional[LLMConfig] = None) -> FailoverChatModel:
+            config: Optional[LLMConfig] = None,
+            timeout: Optional[float] = None) -> FailoverChatModel:
     """Backward-compatible alias of :func:`get_chat_model`."""
     return get_chat_model(model=model, temperature=temperature, max_tokens=max_tokens,
+                          timeout=timeout,
                           response_format=response_format, role=role,
                           api_key=api_key, base_url=base_url, provider=provider,
                           config=config)
@@ -1518,15 +1549,18 @@ def llm_identity(config: Optional[LLMConfig] = None,
                 p = "unknown"
         return p, m, b
 
-    if _runtime_config is not None:
-        return llm_identity(_runtime_config)
+    m = model if model is not None else (_runtime_config.model if _runtime_config else MISTRAL_MODEL)
+    m = (m or "").strip()
 
-    m = (model or "").strip() or MISTRAL_MODEL
-    b = _normalize_base_url(base_url)
-    p = provider_alias(provider or "")
+    b_raw = base_url if base_url is not None else (_runtime_config.base_url if _runtime_config else None)
+    b = _normalize_base_url(b_raw)
+
+    p = provider if provider is not None else (_runtime_config.provider if _runtime_config else "")
+    p = provider_alias(p or "")
+
     if not p:
         try:
-            p = resolve_provider(m, None, base_url or None)
+            p = resolve_provider(m, None, b_raw)
         except UnsupportedProviderError:
             p = "unknown"
     return p, m, b

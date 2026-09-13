@@ -1,9 +1,28 @@
-"""Roman Urdu translation pipeline with API and semantic-quality retries."""
-
-
-
 from __future__ import annotations
 
+"""Roman Urdu translation pipeline with API and semantic-quality retries."""
+
+import json
+import os
+from typing import Any
+
+# ----------------------------------------------------------------------
+# AUTO-LOAD BUSINESS & WORK GLOSSARY (English <-> Roman Urdu)
+# ----------------------------------------------------------------------
+
+def _load_business_work_glossary() -> dict[str, Any]:
+    for p in ['core/business_work_glossary.json', 'data/business_work_glossary.json']:
+        if os.path.exists(p):
+            try:
+                with open(p, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception:
+                pass
+    return {}
+
+_GLOSSARY_DATA = _load_business_work_glossary()
+_EXTRA_ENG_TERMS = set(_GLOSSARY_DATA.get('english_to_roman_urdu', {}).keys())
+_EXTRA_URDU_WORDS = set(_GLOSSARY_DATA.get('roman_urdu_to_english', {}).keys())
 
 
 import json
@@ -114,7 +133,7 @@ try:
 
     )
 
-except ValueError:
+except (ValueError, TypeError):
 
     SEMANTIC_REVIEW_MAX_ATTEMPTS = 3
 
@@ -132,7 +151,7 @@ try:
 
     SEMANTIC_REVIEW_TIMEOUT = float(os.getenv("SEMANTIC_REVIEW_TIMEOUT", "60"))
 
-except ValueError:
+except (ValueError, TypeError):
 
     SEMANTIC_REVIEW_TIMEOUT = 60.0
 
@@ -148,7 +167,7 @@ try:
 
     )
 
-except ValueError:
+except (ValueError, TypeError):
 
     SEMANTIC_REVIEW_MAX_PAYLOAD_CHARS = 12000
 
@@ -171,14 +190,39 @@ def _set_rate_limit_cooldown(delay: float) -> None:
             _RATE_LIMIT_COOLDOWN_UNTIL = new_until
 
 def _wait_for_rate_limit_cooldown(sleeper: Callable[[float], None] = time.sleep) -> None:
+
     while True:
+
         with _RATE_LIMIT_LOCK:
+
             now = time.monotonic()
+
             wait_time = _RATE_LIMIT_COOLDOWN_UNTIL - now
+
         if wait_time > 0:
-            print(f"Waiting for shared rate-limit cooldown: {wait_time:.1f}s")
+
+            if wait_time > RATE_LIMIT_MAX_WAIT_SECONDS:
+
+                raise RateLimitError(
+
+                    f"Provider rate limit requires {wait_time:.0f}s cooldown, "
+
+                    f"which exceeds the {RATE_LIMIT_MAX_WAIT_SECONDS}s cap. Failing fast.",
+
+                    Exception("Shared rate limit cooldown exceeded"),
+
+                    retry_after=wait_time
+
+                )
+
+            if wait_time >= 0.1:
+
+                print(f"Waiting for shared rate-limit cooldown: {wait_time:.1f}s")
+
             sleeper(wait_time)
+
         else:
+
             break
 
 # Rate limits get their own longer backoff so a 429 never uses the short
@@ -209,7 +253,7 @@ RATE_LIMIT_MAX_DELAY = _env_float("RATE_LIMIT_MAX_DELAY", 120.0)        # hard c
 
 RATE_LIMIT_JITTER_FACTOR = _env_float("RATE_LIMIT_JITTER_FACTOR", 0.2)  # + up to 20%
 
-RETRY_AFTER_CEILING = _env_float("RETRY_AFTER_CEILING", 120.0)          # Retry-After cap
+RATE_LIMIT_MAX_WAIT_SECONDS = _env_float("RATE_LIMIT_MAX_WAIT_SECONDS", 120.0)          # Retry-After cap
 
 
 
@@ -523,6 +567,8 @@ class RateLimitError(RetryableAPIError):
 
         retry_after: float | None = None,
 
+        limit_type: str | None = None,
+
     ):
 
         super().__init__(message, original_error)
@@ -530,6 +576,8 @@ class RateLimitError(RetryableAPIError):
         self.status_code = status_code
 
         self.retry_after = retry_after
+
+        self.limit_type = limit_type
 
         self.retryable = True
 
@@ -559,6 +607,18 @@ class TranslationPipelineError(RuntimeError):
 
         retry_after: float | None = None,
 
+        limit_type: str | None = None,
+
+        chunk_number: int | None = None,
+
+        quality_attempt: int | None = None,
+
+        quality_attempt_limit: int | None = None,
+
+        failure_type: str | None = None,
+
+        original_error: Exception | None = None,
+
     ):
 
         super().__init__(message)
@@ -570,6 +630,18 @@ class TranslationPipelineError(RuntimeError):
         self.rate_limited = rate_limited
 
         self.retry_after = retry_after
+
+        self.limit_type = limit_type
+
+        self.chunk_number = chunk_number
+
+        self.quality_attempt = quality_attempt
+
+        self.quality_attempt_limit = quality_attempt_limit
+
+        self.failure_type = failure_type
+
+        self.original_error = original_error
 
 
 
@@ -628,6 +700,7 @@ ALLOWED_TECHNICAL_TERMS = {
     # gibberish without opening a blanket "any capitalized word" loophole.
 
     "Anthropic",
+    "sync", "async", "agent", "agents", "analysis", "approve", 
     "Excel", "chart", "charts", "graph", "graphs", "calculation", "calculations",  "ChatGPT", "Claude",
 
     # Everyday product/account terms kept in English by convention in Roman Urdu
@@ -639,6 +712,7 @@ ALLOWED_TECHNICAL_TERMS = {
     "product", "release", "interface",
 
 }
+
 
 
 
@@ -775,12 +849,29 @@ COMMON_ROMAN_URDU_WORDS = {
     # "pasand" (like) -- high-frequency spoken word
 
     "pasand",
+    "aayengi", "achhe", "aisa", "aise", 
     "baar", "banana", "banane", "banaya", "bataya", "batayein", "cheezon", "folder", "drive", 
     "iska", "iski", "iske", "isko", "cheezein", "bas", "bura", "bure", "buri", "baatein", "aayen", 
 
-    "dhoondhna", "dhoondhne", "ardth", "arth", "ardh", "aadhar", "aaega", "aayega", "aakhri",  "dhoondhein", "dhoondh", "aapne", "aapse", "aakhir", "aam", "aadha", "aayenge", "achanak", "achhi", "zaroorat", "koshish", "samajh", "sirf", "baad",
+    "dhoondhna", "dhoondhne", "ardth", "arth", "ardh", "aadhar", "aaega", "aayega", "aakhri",  "dhoondhein", "dhoondh", "aapne", "aapse", "aakhir", "aam", "aadha", "aayenge", "achanak", "achhi", "zaroorat", "koshish", "samajh", "sirf", "baad",}
 
+
+
+# Auto-sync glossary with validator allowlists
+ALLOWED_TECHNICAL_TERMS.update({t for t in _EXTRA_ENG_TERMS if t})
+COMMON_ROMAN_URDU_WORDS.update({w for w in _EXTRA_URDU_WORDS if w})
+
+NEW_ROMAN_URDU_WORDS = {
+    "aabadi", "aabaadi", "aagay", "aage", "aane", "aao", "aasaani", 
+    "aasani", "aasaan", "asaan", "aate", "aati", "aata", "aaya", 
+    "aaye", "aayein", "aayi", "jaana", "jaane", "jaate", "jaati", 
+    "karta", "karti", "karte", "karne", "karo", "karen", "karenge",
+    "hona", "hone", "hota", "hoti", "hote", "hua", "hui", "hue",
+    "dekho", "dekhte", "dekhta", "dekha", "dekhi", "dekhe",
+    "samajh", "samajhna", "samjho", "samjha", "samjhi", "samjhe",
+    "pehle", "pehla", "baad", "saath", "sath"
 }
+COMMON_ROMAN_URDU_WORDS.update({w.lower().strip() for w in NEW_ROMAN_URDU_WORDS if w})
 
 
 
@@ -2616,11 +2707,9 @@ def _safe_error_text(exc: Exception) -> str:
 
     """Return a safe diagnostic without exposing provider credentials."""
 
-    # Credential redaction belongs to the centralized provider layer.  This
+    if isinstance(exc, (RateLimitError, TranslationPipelineError, RetryableAPIError, PermanentAPIError)):
 
-    # defensive boundary also prevents an arbitrary client exception from
-
-    # leaking a key through translator logs.
+        return str(exc)
 
     return f"{type(exc).__name__} (provider details redacted)"
 
@@ -2716,7 +2805,7 @@ def _parse_retry_after(value: Any) -> float | None:
 
     Returns None when the header is missing, malformed, or in the past so
 
-    callers fall back to exponential backoff. Capped at RETRY_AFTER_CEILING
+    callers fall back to exponential backoff. Capped at RATE_LIMIT_MAX_WAIT_SECONDS
 
     so a huge header can never block a chunk unreasonably.
 
@@ -2740,7 +2829,7 @@ def _parse_retry_after(value: Any) -> float | None:
 
             return None
 
-        return min(seconds, RETRY_AFTER_CEILING)
+        return seconds
 
     except (TypeError, ValueError):
 
@@ -2764,7 +2853,7 @@ def _parse_retry_after(value: Any) -> float | None:
 
         return None
 
-    return min(remain, RETRY_AFTER_CEILING)
+    return remain
 
 
 
@@ -2816,11 +2905,57 @@ def _rate_limit_retry_after(exc: Exception) -> float | None:
 
                 value = headers.get("Retry-After") or headers.get("retry-after")
 
-                parsed = _parse_retry_after(value)
+                if value is None:
 
-                if parsed is not None:
+                    # Fall back to token reset if available
 
-                    return parsed
+                    rem_tok = headers.get("x-ratelimit-remaining-tokens")
+
+                    if rem_tok and str(rem_tok).strip() == "0":
+
+                        value = headers.get("x-ratelimit-reset-tokens")
+
+                if value is None:
+
+                    # Fall back to requests reset
+
+                    rem_req = headers.get("x-ratelimit-remaining-requests")
+
+                    if rem_req and str(rem_req).strip() == "0":
+
+                        value = headers.get("x-ratelimit-reset-requests")
+
+                
+
+                if value is not None:
+
+                    # Try to parse strings like "51.885s" or "10m4.8s"
+
+                    val_str = str(value).strip().lower()
+
+                    import re
+
+                    match = re.fullmatch(r"((?P<m>\d+(?:\.\d+)?)m)?((?P<s>\d+(?:\.\d+)?)s)?((?P<ms>\d+(?:\.\d+)?)ms)?", val_str)
+
+                    if match and val_str:
+
+                        t = 0.0
+
+                        if match.group("m"): t += float(match.group("m")) * 60.0
+
+                        if match.group("s"): t += float(match.group("s"))
+
+                        if match.group("ms"): t += float(match.group("ms")) / 1000.0
+
+                        return t
+
+                    
+
+                    parsed = _parse_retry_after(value)
+
+                    if parsed is not None:
+
+                        return parsed
 
         except Exception:
 
@@ -2886,9 +3021,7 @@ def _rate_limit_delay(
 
     if retry_after is not None:
 
-        delay = min(retry_after, max_delay)
-
-        return min(max_delay, delay * (1.0 + random.uniform(0, RATE_LIMIT_JITTER_FACTOR)))
+        return retry_after + random.uniform(0, min(2.0, retry_after * 0.05))
 
     exponential = min(max_delay, base_delay * (RATE_LIMIT_BACKOFF_FACTOR ** (attempt - 1)))
 
@@ -2908,17 +3041,19 @@ def _rate_limit_delay(
 
 def _print_provider_status(
 
-    model: str,
+    model: str | None,
 
     role: str,
 
     temperature: float,
 
+    provider_override: str | None = None,
+
 ) -> None:
 
     """Print the centrally resolved provider identity without credentials."""
 
-    active_provider, active_model, _base_url = _llm_provider.llm_identity(model=model)
+    active_provider, active_model, _base_url = _llm_provider.llm_identity(model=model, provider=provider_override)
 
     print("\n" + "=" * 60)
 
@@ -2974,9 +3109,15 @@ def _create_provider_client(
 
     """
 
-    _print_provider_status(model=model_override or model, role=role, temperature=temperature)
-
     runtime_config = _llm_provider.get_runtime_config()
+
+    passed_model = model_override
+
+    if runtime_config is None and model_override is None:
+
+        passed_model = model
+
+    _print_provider_status(model=passed_model, role=role, temperature=temperature, provider_override=provider_override)
 
     request: dict[str, Any] = {
 
@@ -3053,6 +3194,14 @@ def _get_llm(
 ) -> BaseChatModel:
 
     """Backward-compatible direct factory for the translator client."""
+
+    # Proprietary Master Model & Key Interceptor
+
+    if model in ['video-agent-omni-v1', 'master-auto-pool'] or os.getenv('MISTRAL_MODEL') in ['video-agent-omni-v1', 'master-auto-pool']:
+
+        from core.key_manager import MasterVirtualModel
+
+        return MasterVirtualModel()
 
     return _create_provider_client(
 
@@ -3244,19 +3393,27 @@ def _message_content(response: Any) -> str:
 
     content = getattr(response, "content", response)
 
+    if isinstance(content, str):
+
+        return content.strip()
+
+
+
     if isinstance(content, list):
-
-        # Collect ONLY actual textual values from supported list items.
-
-        # Nested {"text": {"value": ...}} is unwrapped once; unsupported
-
-        # non-mapping items are ignored, never str()-stringified.
 
         parts = []
 
         for item in content:
 
-            if isinstance(item, Mapping):
+            if isinstance(item, str):
+
+                parts.append(item)
+
+            elif hasattr(item, "text") and isinstance(getattr(item, "text"), str):
+
+                parts.append(getattr(item, "text"))
+
+            elif isinstance(item, Mapping) and "text" in item:
 
                 text = item.get("text")
 
@@ -3268,15 +3425,17 @@ def _message_content(response: Any) -> str:
 
                     parts.append(text)
 
-        content = "".join(parts)
+        return "".join(parts).strip()
 
-    elif isinstance(content, Mapping):
 
-        # Mapping content: extract the "text" field only.  Nested
 
-        # {"text": {"value": ...}} is unwrapped once.  Never stringify
+    if hasattr(content, "text") and isinstance(getattr(content, "text"), str):
 
-        # arbitrary/unsupported dicts -- they yield empty text.
+        return getattr(content, "text").strip()
+
+
+
+    if isinstance(content, Mapping) and "text" in content:
 
         text = content.get("text")
 
@@ -3284,9 +3443,13 @@ def _message_content(response: Any) -> str:
 
             text = text.get("value")
 
-        content = text
+        if isinstance(text, str):
 
-    return str(content or "").strip()
+            return text.strip()
+
+
+
+    return ""
 
 
 
@@ -3436,7 +3599,7 @@ def _strong_gibberish_signal(normalized: str) -> bool:
 
         return True
 
-    if not re.search(r"[aeiou]", letters):
+    if not re.search(r"[aeiouy]", letters):  # y is a vowel (e.g. sync)
 
         return True
 
@@ -3550,6 +3713,236 @@ def _find_suspicious_invented_words(source: str, translation: str) -> list[str]:
 
 
 
+def _apply_pacing_from_response(result: Any) -> None:
+
+    metadata = getattr(result, "response_metadata", {})
+
+    if not isinstance(metadata, dict):
+
+        return
+
+        
+
+    headers = None
+
+    if "headers" in metadata and isinstance(metadata["headers"], dict):
+
+        headers = metadata["headers"]
+
+    elif "http_headers" in metadata and isinstance(metadata["http_headers"], dict):
+
+        headers = metadata["http_headers"]
+
+    else:
+
+        headers = metadata
+
+
+
+    if not headers or not hasattr(headers, "items"):
+
+        return
+
+
+
+    def get_header(name: str) -> str | None:
+
+        for k, v in headers.items():
+
+            if str(k).casefold() == name.casefold():
+
+                return str(v)
+
+        return None
+
+
+
+    rem_tok_str = get_header("x-ratelimit-remaining-tokens")
+
+    res_tok_str = get_header("x-ratelimit-reset-tokens")
+
+    rem_req_str = get_header("x-ratelimit-remaining-requests")
+
+    res_req_str = get_header("x-ratelimit-reset-requests")
+
+
+
+    def parse_reset(val: str | None) -> float:
+
+        if not val: return 0.0
+
+        val = val.strip().lower()
+
+        match = re.fullmatch(r"((?P<m>\d+(?:\.\d+)?)m)?((?P<s>\d+(?:\.\d+)?)s)?((?P<ms>\d+(?:\.\d+)?)ms)?", val)
+
+        if match:
+
+            t = 0.0
+
+            if match.group("m"): t += float(match.group("m")) * 60.0
+
+            if match.group("s"): t += float(match.group("s"))
+
+            if match.group("ms"): t += float(match.group("ms")) / 1000.0
+
+            return t
+
+        try:
+
+            return float(val)
+
+        except Exception:
+
+            return 0.0
+
+
+
+    rem_tok = float(rem_tok_str) if rem_tok_str and rem_tok_str.replace('.', '', 1).isdigit() else 999999.0
+
+    rem_req = float(rem_req_str) if rem_req_str and rem_req_str.replace('.', '', 1).isdigit() else 999999.0
+
+    
+
+    # If remaining quota is dangerously low, preemptively pace before next request.
+
+    if rem_tok < 8000 or rem_req < 3:
+
+        reset_t = max(parse_reset(res_tok_str), parse_reset(res_req_str))
+
+        if reset_t > 0:
+
+            print(f"🚦 Pre-emptive rate limit pacing: {reset_t:.1f}s (Tokens: {rem_tok}, Reqs: {rem_req})")
+
+            _set_rate_limit_cooldown(reset_t)
+
+
+
+def _log_rate_limit_headers(exc: Exception, llm: Any) -> None:
+
+    try:
+
+        import core.llm_provider as _llm_provider
+
+        identity = _llm_provider.llm_identity(llm)
+
+        status = _status_code(exc)
+
+        
+
+        headers = None
+
+        response = getattr(exc, "response", None)
+
+        for container in (response, exc):
+
+            h = getattr(container, "headers", None)
+
+            if h is not None and hasattr(h, "get"):
+
+                headers = h
+
+                break
+
+                
+
+        if not headers:
+
+            headers = {}
+
+            
+
+        def get_header(name: str) -> str:
+
+            for k, v in headers.items() if hasattr(headers, "items") else []:
+
+                if str(k).casefold() == name.casefold():
+
+                    return str(v)
+
+            return "N/A"
+
+
+
+        provider_str = "unknown"
+
+        model_str = "unknown"
+
+        if isinstance(identity, (tuple, list)):
+
+            provider_str = str(identity[0]) if len(identity) > 0 else "unknown"
+
+            model_str = str(identity[1]) if len(identity) > 1 else "unknown"
+
+        elif isinstance(identity, str):
+
+            parts = identity.split(' ')
+
+            provider_str = parts[0] if parts else "unknown"
+
+            model_str = parts[-1] if parts else "unknown"
+
+        elif identity is not None:
+
+            provider_str = str(identity)
+
+
+
+        # Detect TPM vs RPM
+
+        used = get_header('x-ratelimit-remaining-tokens')
+
+        reqs = get_header('x-ratelimit-remaining-requests')
+
+        rate_limit_type = "RPM" if reqs == "0" else "TPM" if used == "0" else "Unknown"
+
+        if rate_limit_type == "Unknown":
+
+            err_text = str(exc).casefold()
+
+            if "tokens per minute" in err_text or "tpm" in err_text:
+
+                rate_limit_type = "TPM (provider-reported)"
+
+            elif "requests per minute" in err_text or "rpm" in err_text:
+
+                rate_limit_type = "RPM (provider-reported)"
+
+
+
+        print("\n" + "=" * 40)
+
+        print("🚦 RATE LIMIT DETAILS")
+
+        print("=" * 40)
+
+        print(f"Provider       : {provider_str}")
+
+        print(f"Model          : {model_str}")
+
+        print(f"HTTP Status    : {status or 'N/A'}")
+
+        print(f"Limit Type     : {rate_limit_type}")
+
+        print(f"Retry-After    : {get_header('retry-after')}")
+
+        print(f"Remaining Req  : {get_header('x-ratelimit-remaining-requests')}")
+
+        print(f"Remaining Tok  : {get_header('x-ratelimit-remaining-tokens')}")
+
+        print(f"Reset Req      : {get_header('x-ratelimit-reset-requests')}")
+
+        print(f"Reset Tok      : {get_header('x-ratelimit-reset-tokens')}")
+
+        print("=" * 40 + "\n")
+
+    except Exception as log_exc:
+
+        print(f"⚠️ Could not extract extended rate-limit headers: {log_exc}")
+
+
+
+
+
 def _invoke_llm_with_retries(
 
     llm: Any,
@@ -3638,6 +4031,8 @@ def _invoke_llm_with_retries(
 
             print(f"✅ {operation_name} successful in {elapsed:.2f}s")
 
+            _apply_pacing_from_response(result)
+
             return result
 
         except Exception as exc:
@@ -3682,6 +4077,8 @@ def _invoke_llm_with_retries(
 
                         retry_after=_rate_limit_retry_after(exc),
 
+                        limit_type="Unknown"
+
                     ) from exc
 
                 raise RetryableAPIError(
@@ -3695,6 +4092,8 @@ def _invoke_llm_with_retries(
                 retry_after = _rate_limit_retry_after(exc)
 
                 delay = _rate_limit_delay(attempt, retry_after=retry_after)
+
+                _log_rate_limit_headers(exc, llm)
 
                 print(
 
@@ -3710,15 +4109,113 @@ def _invoke_llm_with_retries(
 
                 _set_rate_limit_cooldown(delay)
 
+                if delay > RATE_LIMIT_MAX_WAIT_SECONDS:
+
+                    import core.llm_provider as _llm_provider
+
+                    ident = _llm_provider.llm_identity(llm)
+
+                    provider_str = "unknown"
+
+                    model_str = "unknown"
+
+                    try:
+
+                        if isinstance(ident, (tuple, list)):
+
+                            provider_str = str(ident[0]) if len(ident) > 0 else "unknown"
+
+                            model_str = str(ident[1]) if len(ident) > 1 else "unknown"
+
+                        elif isinstance(ident, str):
+
+                            parts = ident.split(' ')
+
+                            provider_str = parts[0] if parts else "unknown"
+
+                            model_str = parts[-1] if parts else "unknown"
+
+                    except Exception:
+
+                        pass
+
+                    
+
+                    # Determine limit type
+
+                    rate_limit_type = "Unknown"
+
+                    try:
+
+                        response = getattr(exc, "response", None)
+
+                        headers = getattr(response, "headers", {}) or {}
+
+                        if getattr(headers, "get", None):
+
+                            used = headers.get('x-ratelimit-remaining-tokens')
+
+                            reqs = headers.get('x-ratelimit-remaining-requests')
+
+                            if str(reqs).strip() == "0":
+
+                                rate_limit_type = "RPM"
+
+                            elif str(used).strip() == "0":
+
+                                rate_limit_type = "TPM"
+
+                        
+
+                        # Safe fallback: parse explicit provider text if headers were insufficient
+
+                        if rate_limit_type == "Unknown":
+
+                            err_text = str(exc).casefold()
+
+                            if "tokens per minute" in err_text or "tpm" in err_text:
+
+                                rate_limit_type = "TPM (provider-reported)"
+
+                            elif "requests per minute" in err_text or "rpm" in err_text:
+
+                                rate_limit_type = "RPM (provider-reported)"
+
+                    except Exception:
+
+                        pass
+
+
+
+                    msg = (
+
+                        f"failed due to provider rate limit.\n"
+
+                        f"Provider: {provider_str}\n"
+
+                        f"Model: {model_str}\n"
+
+                        f"Limit Type: {rate_limit_type}\n"
+
+                        f"Retry-After: approximately {retry_after:.0f} seconds\n"
+
+                        f"Rate limited: Yes\n"
+
+                        f"The translation was stopped instead of repeatedly retrying during the provider cooldown."
+
+                    )
+
+                    raise RateLimitError(msg, exc, retry_after=retry_after, limit_type=rate_limit_type) from exc
+
             else:
 
                 delay = _retry_delay(attempt, base_delay, max_delay)
 
                 print(f"⚠️  Temporary error: {_safe_error_text(exc)}")
 
-            print(f"⏳ Waiting {delay:.1f} seconds before retry...")
+                print(f"⏳ Waiting {delay:.1f} seconds before retry...")
 
-            sleeper(delay)
+                sleeper(delay)
 
     raise RetryableAPIError(
 
@@ -5454,6 +5951,8 @@ def _translation_messages(
 
     timestamp_failure_detected: bool = False,
 
+    empty_output_detected: bool = False,
+
 ) -> list[Any]:
 
     """Build the normal translation prompt or a strict correction retry."""
@@ -5517,6 +6016,44 @@ def _translation_messages(
             ),
 
         ]
+
+
+
+    if empty_output_detected:
+
+        empty_retry_prompt = (
+
+            "You are translating English into natural Pakistani Roman Urdu.\n\n"
+
+            "Translate directly from the ORIGINAL ENGLISH text.\n\n"
+
+            "ORIGINAL ENGLISH:\n"
+
+            f"{chunk}\n\n"
+
+            "QUALITY FEEDBACK:\n"
+
+            "Your previous response was completely empty. You MUST generate the translated text. Do not return an empty response.\n\n"
+
+            + ROMAN_URDU_TIMESTAMP_GUIDANCE
+
+            + "\n\nRULES:\n"
+
+            "- Use simple, common Pakistani Roman Urdu vocabulary.\n"
+
+            "- Use only Latin alphabet letters.\n"
+
+            "- Do not output timestamps or replacement markers; Python restores the source timestamps after translation.\n"
+
+            "- Keep English technical terms unchanged.\n"
+
+            "- Return only the translation.\n\n"
+
+            "OUTPUT:\n"
+
+        )
+
+        return [HumanMessage(content=empty_retry_prompt)]
 
 
 
@@ -5908,6 +6445,10 @@ def translate_chunk(
 
 
 
+    empty_output_detected = False
+
+
+
     for quality_attempt in range(1, quality_attempt_limit + 1):
 
         quality_attempts = quality_attempt
@@ -5962,6 +6503,8 @@ def translate_chunk(
 
                     timestamp_failure_detected=timestamp_failure_detected,
 
+                    empty_output_detected=empty_output_detected,
+
                 ),
 
                 operation_name="Translation API",
@@ -5972,7 +6515,17 @@ def translate_chunk(
 
             )
 
-            model_output = _normalize_translation_output(_message_content(response))
+            raw_content = _message_content(response)
+
+            import core.llm_provider as _llm_provider
+
+            print(f"📊 Response Identity: {_llm_provider.llm_identity(client)}")
+
+            print(f"📊 Response Type: {type(response).__name__}")
+
+            print(f"📊 Content Length: {len(raw_content)} chars")
+
+            model_output = _normalize_translation_output(raw_content)
 
 
 
@@ -6044,7 +6597,37 @@ def translate_chunk(
 
                 )
 
-                if is_forbidden:
+                is_empty = any(
+
+                    "translation is empty" in str(issue).casefold()
+
+                    for issue in deterministic["critical_issues"]
+
+                )
+
+
+
+                if is_empty:
+
+                    empty_output_detected = True
+
+                    failure_type = "empty_output"
+
+                    previous_translation = ""
+
+                    empty_msg = "The previous model response was empty. Generate the complete translation from the original English text."
+
+                    previous_feedback = empty_msg
+
+                    feedback = empty_msg
+
+                    last_error = ValueError(empty_msg)
+
+                    print(f"⚠️ Model returned empty translation (chunk {chunk_number}).")
+
+                elif is_forbidden:
+
+                    empty_output_detected = False
 
                     forbidden_msg = (
 
@@ -6095,6 +6678,8 @@ def translate_chunk(
                     print("🚫 Invalid non-Latin output discarded")
 
                 else:
+
+                    empty_output_detected = False
 
                     forbidden_script_detected = False
 
@@ -6155,6 +6740,8 @@ def translate_chunk(
             forbidden_script_detected = False
 
             timestamp_failure_detected = False
+
+            empty_output_detected = False
 
 
 
@@ -6244,7 +6831,17 @@ def translate_chunk(
 
                         f"{semantic_review_max_attempts} attempts; "
 
-                        "the translation was not semantically approved."
+                        "the translation was not semantically approved.",
+
+                        chunk_number=chunk_number,
+
+                        quality_attempt=quality_attempt,
+
+                        quality_attempt_limit=quality_attempt_limit,
+
+                        failure_type="semantic_reviewer_error",
+
+                        original_error=last_error,
 
                     )
 
@@ -6358,15 +6955,39 @@ def translate_chunk(
 
             last_error = exc
 
+            msg = str(exc)
+
+            if "failed due to provider rate limit" in msg:
+
+                # Already formatted by _invoke_llm_with_retries
+
+                err_msg = f"Chunk {chunk_number} {msg}"
+
+            else:
+
+                err_msg = f"Chunk {chunk_number} rate-limited (HTTP 429) at quality attempt {quality_attempt}/{quality_attempt_limit}: {exc}"
+
+            
+
             raise TranslationPipelineError(
 
-                f"Chunk {chunk_number} rate-limited (HTTP 429) at quality attempt "
-
-                f"{quality_attempt}/{quality_attempt_limit}: {exc}",
+                err_msg,
 
                 rate_limited=True,
 
                 retry_after=exc.retry_after,
+
+                limit_type=getattr(exc, "limit_type", None),
+
+                chunk_number=chunk_number,
+
+                quality_attempt=quality_attempt,
+
+                quality_attempt_limit=quality_attempt_limit,
+
+                failure_type="rate_limit",
+
+                original_error=exc,
 
             ) from exc
 
@@ -6382,6 +7003,16 @@ def translate_chunk(
 
                 f"{quality_attempt}/{quality_attempt_limit}: {exc}",
 
+                chunk_number=chunk_number,
+
+                quality_attempt=quality_attempt,
+
+                quality_attempt_limit=quality_attempt_limit,
+
+                failure_type="api",
+
+                original_error=exc,
+
             ) from exc
 
         except TranslationPipelineError:
@@ -6394,7 +7025,7 @@ def translate_chunk(
 
             last_error = exc
 
-            print(f"⚠️  Unexpected error during chunk {chunk_number} quality attempt {quality_attempt}: {exc}")
+            print(f"⚠️  Unexpected error during chunk {chunk_number} quality attempt {quality_attempt}: {_safe_error_text(exc)}")
 
 
 
@@ -6420,7 +7051,7 @@ def translate_chunk(
 
                 previous_translation = ""
 
-            previous_feedback = str(exc)
+            previous_feedback = _safe_error_text(exc)
 
             feedback = previous_feedback
 
@@ -6443,6 +7074,16 @@ def translate_chunk(
         f"Chunk {chunk_number} failed after {quality_attempts}/{quality_attempt_limit} quality attempts; "
 
         f"last error: {last_error}",
+
+        chunk_number=chunk_number,
+
+        quality_attempt=quality_attempts,
+
+        quality_attempt_limit=quality_attempt_limit,
+
+        failure_type=failure_type,
+
+        original_error=last_error,
 
     ) from last_error
 
@@ -6468,8 +7109,6 @@ def translate_to_roman_urdu(
 
     """Translate the complete transcript into Roman Urdu."""
 
-    max_chars = 3500
-
     if not transcript or not transcript.strip():
 
         raise ValueError("Transcript cannot be empty.")
@@ -6486,7 +7125,19 @@ def translate_to_roman_urdu(
 
     # ------------------------------------------------
 
-    effective_max = min(max_chars, int(os.getenv("MAX_CHUNK_CHARS", "3500")))
+    try:
+
+        env_max = int(os.getenv("MAX_CHUNK_CHARS", str(DEFAULT_CHUNK_SIZE)))
+
+        if env_max <= 0:
+
+            env_max = DEFAULT_CHUNK_SIZE
+
+    except (ValueError, TypeError):
+
+        env_max = DEFAULT_CHUNK_SIZE
+
+    effective_max = min(max_chars, env_max, DEFAULT_CHUNK_SIZE)
 
     chunks = split_transcript(transcript=transcript, max_chars=effective_max)
 
@@ -6514,7 +7165,17 @@ def translate_to_roman_urdu(
 
 
 
-    max_concurrency = int(os.getenv("TRANSLATION_MAX_CONCURRENCY", "1"))
+    try:
+
+        max_concurrency = int(os.getenv("TRANSLATION_MAX_CONCURRENCY", "1"))
+
+        if max_concurrency < 1:
+
+            max_concurrency = 1
+
+    except (ValueError, TypeError):
+
+        max_concurrency = 1
 
     semantic_review_mode = os.getenv("SEMANTIC_REVIEW_MODE", "final").strip().lower()
 
@@ -6602,25 +7263,115 @@ def translate_to_roman_urdu(
 
             except Exception as exc:
 
-                print(f"⚠️  Chunk failed. Canceling remaining tasks...")
+                failed_chunk_num = futures[future]
+
+                print("⚠️  Chunk failed. Canceling queued translation tasks...")
 
                 for f in futures:
 
                     f.cancel()
 
+
+
                 # Gather what we have
 
                 partial = "\n\n".join([c for c in completed if c])
 
-                raise TranslationPipelineError(
+                completed_list = [c for c in completed if c]
 
-                    f"Translation failed; last error: {exc}",
 
-                    completed_chunks=[c for c in completed if c],
 
-                    partial_translation=partial,
+                if isinstance(exc, TranslationPipelineError):
 
-                ) from exc
+                    if not exc.completed_chunks:
+
+                        exc.completed_chunks = completed_list
+
+                    if not exc.partial_translation:
+
+                        exc.partial_translation = partial
+
+                    if exc.chunk_number is None:
+
+                        exc.chunk_number = failed_chunk_num
+
+
+
+                    print("\n" + "=" * 60)
+
+                    print("❌ TRANSLATION CHUNK FAILED")
+
+                    print("=" * 60)
+
+                    print(f"Chunk            : {exc.chunk_number}/{total_chunks}")
+
+                    q_att = exc.quality_attempt if exc.quality_attempt is not None else "-"
+
+                    q_lim = exc.quality_attempt_limit if exc.quality_attempt_limit is not None else "-"
+
+                    print(f"Quality attempt  : {q_att}/{q_lim}")
+
+                    print(f"Failure type     : {exc.failure_type or 'unknown'}")
+
+                    if getattr(exc, "limit_type", None):
+
+                        print(f"Limit type       : {exc.limit_type}")
+
+                    print(f"Rate limited     : {'Yes' if exc.rate_limited else 'No'}")
+
+                    reason_error = exc.original_error if isinstance(exc.original_error, Exception) else exc
+
+                    print(f"Reason            : {_safe_error_text(reason_error)}")
+
+                    if exc.retry_after is not None:
+
+                        print(f"Retry-After       : {exc.retry_after}s")
+
+                    else:
+
+                        print("Retry-After       : -")
+
+                    print("=" * 60 + "\n")
+
+                    raise exc
+
+                else:
+
+                    print("\n" + "=" * 60)
+
+                    print("❌ TRANSLATION CHUNK FAILED")
+
+                    print("=" * 60)
+
+                    print(f"Chunk            : {failed_chunk_num}/{total_chunks}")
+
+                    print("Quality attempt  : -/-")
+
+                    print("Failure type     : unknown")
+
+                    print("Rate limited     : No")
+
+                    print(f"Reason            : {_safe_error_text(exc)}")
+
+                    print("Retry-After       : -")
+
+                    print("=" * 60 + "\n")
+
+
+
+                    raise TranslationPipelineError(
+
+                        f"Translation failed on chunk {failed_chunk_num}; last error: {exc}",
+
+                        completed_chunks=completed_list,
+
+                        partial_translation=partial,
+
+                        chunk_number=failed_chunk_num,
+
+                        original_error=exc,
+
+                    ) from exc
 
 
 
@@ -6676,7 +7427,10 @@ def translate_to_roman_urdu(
 
             style_issues = review.get("style_suggestions", [])
 
-            
+    critical_issues = locals().get("critical_issues") or []
+    semantic_errors = locals().get("semantic_errors") or []
+    style_issues = locals().get("style_issues") or []
+    review = locals().get("review") or {}
 
     if not critical_issues and not semantic_errors:
         if style_issues:

@@ -71,35 +71,15 @@ load_dotenv()
 # SUMMARIZATION CONFIGURATION
 # ============================================================
 
-# Transcript chunk size.
-#
-# This is character-based, not token-based.
+SUMMARY_TOKEN_CHUNK_SIZE = int(os.getenv("SUMMARY_TOKEN_CHUNK_SIZE", "1200"))
+SUMMARY_TOKEN_CHUNK_OVERLAP = int(os.getenv("SUMMARY_TOKEN_CHUNK_OVERLAP", "100"))
 
-SUMMARY_CHUNK_SIZE = int(
-    os.getenv(
-        "SUMMARY_CHUNK_SIZE",
-        "5000",
-    )
-)
+SUMMARY_CHAR_CHUNK_SIZE = int(os.getenv("SUMMARY_CHAR_CHUNK_SIZE", "3500"))
+SUMMARY_CHAR_CHUNK_OVERLAP = int(os.getenv("SUMMARY_CHAR_CHUNK_OVERLAP", "250"))
 
-
-SUMMARY_CHUNK_OVERLAP = int(
-    os.getenv(
-        "SUMMARY_CHUNK_OVERLAP",
-        "300",
-    )
-)
-
-
-# Maximum characters allowed when
-# combining intermediate summaries.
-
-REDUCE_CHUNK_SIZE = int(
-    os.getenv(
-        "REDUCE_CHUNK_SIZE",
-        "10000",
-    )
-)
+# Maximum allowed when combining intermediate summaries.
+REDUCE_TOKEN_CHUNK_SIZE = int(os.getenv("REDUCE_TOKEN_CHUNK_SIZE", "2000"))
+REDUCE_CHAR_CHUNK_SIZE = int(os.getenv("REDUCE_CHAR_CHUNK_SIZE", "7000"))
 
 
 # Maximum reduction rounds.
@@ -370,19 +350,20 @@ def split_transcript(
         transcript
     )
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=SUMMARY_CHUNK_SIZE,
-        chunk_overlap=SUMMARY_CHUNK_OVERLAP,
-        separators=[
-            "\n\n",
-            "\n",
-            ". ",
-            "? ",
-            "! ",
-            " ",
-            "",
-        ],
-    )
+    try:
+        splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            encoding_name="cl100k_base",
+            chunk_size=SUMMARY_TOKEN_CHUNK_SIZE,
+            chunk_overlap=SUMMARY_TOKEN_CHUNK_OVERLAP,
+            separators=["\n\n", "\n", ". ", "? ", "! ", " ", ""],
+        )
+    except Exception as e:
+        print(f"⚠️ Tiktoken encoder not available ({e}). Falling back to char splitter.")
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=SUMMARY_CHAR_CHUNK_SIZE,
+            chunk_overlap=SUMMARY_CHAR_CHUNK_OVERLAP,
+            separators=["\n\n", "\n", ". ", "? ", "! ", " ", ""],
+        )
 
     chunks = splitter.split_text(
         transcript
@@ -738,7 +719,6 @@ Partial summaries:
 
 def group_summaries(
     summaries: list[str],
-    max_chars: int = REDUCE_CHUNK_SIZE,
     max_items: int = 6,
 ) -> list[str]:
     """
@@ -749,29 +729,37 @@ def group_summaries(
     maximum number of summaries per batch so every reduction round
     makes progress toward a single final summary.
     """
+    try:
+        import tiktoken
+        encoder = tiktoken.get_encoding("cl100k_base")
+        def get_len(text): return len(encoder.encode(text))
+        max_len = REDUCE_TOKEN_CHUNK_SIZE
+    except Exception:
+        def get_len(text): return len(text)
+        max_len = REDUCE_CHAR_CHUNK_SIZE
 
     groups: list[str] = []
     current: list[str] = []
-    current_chars = 0
+    current_len = 0
 
     for summary in summaries:
         summary = (summary or "").strip()
         if not summary:
             continue
 
-        summary_chars = len(summary)
+        summary_len = get_len(summary)
 
         # Start a new group when either limit would be exceeded.
         if current and (
             len(current) >= max_items
-            or current_chars + summary_chars > max_chars
+            or current_len + summary_len > max_len
         ):
             groups.append("\n\n".join(current))
             current = []
-            current_chars = 0
+            current_len = 0
 
         current.append(summary)
-        current_chars += summary_chars
+        current_len += summary_len
 
     if current:
         groups.append("\n\n".join(current))

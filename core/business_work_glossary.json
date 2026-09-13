@@ -1,0 +1,1411 @@
+{
+  "metadata": {
+    "title": "Bilingual Business, Workplace & Tech Glossary (English <-> Roman Urdu)",
+    "description": "Standard professional terminology for real-life business, operations, and IT environments.",
+    "version": "1.0"
+  },
+  "english_to_roman_urdu": {
+    "revenue": {
+      "urdu": "aamdani / revenue",
+      "example": "Company ka revenue is quarter mein 20% barh gaya."
+    },
+    "profit": {
+      "urdu": "munafa / profit",
+      "example": "Net profit pichle saal se behtar raha."
+    },
+    "loss": {
+      "urdu": "nuqsaan / loss",
+      "example": "Operations mein hone wale loss ko control karna zaroori hai."
+    },
+    "margin": {
+      "urdu": "margin / bachat ka tanasub",
+      "example": "Profit margin maintain rakhna zaroori hai."
+    },
+    "budget": {
+      "urdu": "budget / takhmeena",
+      "example": "Naye project ke liye budget approve ho gaya."
+    },
+    "forecast": {
+      "urdu": "paish-goi / andaza / forecast",
+      "example": "Agli maahi ki sales forecast bohot achi hai."
+    },
+    "audit": {
+      "urdu": "hisab kitab ki janch / audit",
+      "example": "Accounts team internal audit ki tayyari kar rahi hai."
+    },
+    "investment": {
+      "urdu": "sarmaya-kaari / investment",
+      "example": "Technology mein investment se efficiency barhti hai."
+    },
+    "expense": {
+      "urdu": "akhrajaat / expenses",
+      "example": "Fizool expenses ko kam karna hoga."
+    },
+    "invoice": {
+      "urdu": "chalan / bill / invoice",
+      "example": "Client ko invoice email kar di gayi hai."
+    },
+    "receipt": {
+      "urdu": "raseed / payment receipt",
+      "example": "Payment ki receipt accounts mein jama karwa dein."
+    },
+    "billing": {
+      "urdu": "billing / hisab banana",
+      "example": "Billing cycle har maah ki 25 tareekh ko close hota hai."
+    },
+    "cashflow": {
+      "urdu": "paison ka bahaav / cash flow",
+      "example": "Healthy cash flow business ke liye lazmi hai."
+    },
+    "payroll": {
+      "urdu": "tankhwahon ka nizaam / payroll",
+      "example": "Maheenay ke aakhir mein payroll process hota hai."
+    },
+    "contract": {
+      "urdu": "muaahida / contract",
+      "example": "Client ne 2 saal ka contract sign kar liya hai."
+    },
+    "agreement": {
+      "urdu": "raza-mandi / agreement",
+      "example": "Dono parties ke darmiyan agreement tay pa gaya."
+    },
+    "vendor": {
+      "urdu": "maal supply karne wala / vendor",
+      "example": "Naye vendor se rates negotiate karein."
+    },
+    "client": {
+      "urdu": "gahak / client",
+      "example": "Client ke sath meeting kal subah 10 bajay scheduled hai."
+    },
+    "customer": {
+      "urdu": "kharidar / customer",
+      "example": "Customer feedback service ko behtar banati hai."
+    },
+    "stakeholder": {
+      "urdu": "hissay-daar / stakeholder",
+      "example": "Sabhi stakeholders ko progress update bhej di gayi hai."
+    },
+    "negotiation": {
+      "urdu": "baatcheet / muzakraat / negotiation",
+      "example": "Rates par negotiation jaari hai."
+    },
+    "proposal": {
+      "urdu": "tajweez / business proposal",
+      "example": "Client ko detailed proposal submit kar diya gaya."
+    },
+    "approval": {
+      "urdu": "manzoori / approval",
+      "example": "Management se budget approval mil gayi hai."
+    },
+    "compliance": {
+      "urdu": "qawaneen par amal / compliance",
+      "example": "Company policies ki compliance lazmi hai."
+    },
+    "policy": {
+      "urdu": "hikmat-e-amli / qanoon / policy",
+      "example": "Company ki return policy clear hai."
+    },
+    "risk": {
+      "urdu": "khatrah / risk",
+      "example": "Risk management har business ka ahem hissa hai."
+    },
+    "strategy": {
+      "urdu": "hikmat-e-amli / mansooba-bandi / strategy",
+      "example": "Agli quarter ki marketing strategy tayyar hai."
+    },
+    "milestone": {
+      "urdu": "ahem marhala / milestone",
+      "example": "Team ne project ka pehla milestone waqt par achieve kiya."
+    },
+    "target": {
+      "urdu": "hadaf / target",
+      "example": "Monthly sales target achieve ho gaya."
+    },
+    "kpi": {
+      "urdu": "kargardagi ka paimana / KPI",
+      "example": "Har employee ke KPIs set kar diye gaye hain."
+    },
+    "performance": {
+      "urdu": "kargardagi / performance",
+      "example": "Overall performance review acha raha."
+    },
+    "efficiency": {
+      "urdu": "mehnat aur waqt ki bachat / efficiency",
+      "example": "Automation se operational efficiency barh gayi."
+    },
+    "productivity": {
+      "urdu": "paidawari salahiyat / productivity",
+      "example": "Staff ki productivity improve karne ke liye training zaroori hai."
+    },
+    "scalability": {
+      "urdu": "barhne aur phailne ki gunjaish / scalability",
+      "example": "System ki scalability ka jaiza lein."
+    },
+    "meeting": {
+      "urdu": "meeting / ijlaas / guftagu",
+      "example": "Daily standup meeting 15 minute ki hoti hai."
+    },
+    "agenda": {
+      "urdu": "bahes ke ahem nukat / agenda",
+      "example": "Meeting ka agenda pehle se share kar dein."
+    },
+    "minutes": {
+      "urdu": "meeting ke faislay / MoM / minutes",
+      "example": "Meeting ke baad minutes of meeting note karein."
+    },
+    "deadline": {
+      "urdu": "aakhri tareekh / waqt ki pabandi / deadline",
+      "example": "Project ki deadline Friday sham 5 bajay tak hai."
+    },
+    "schedule": {
+      "urdu": "auqaat-e-kaar / schedule",
+      "example": "Weekly production schedule release ho gaya."
+    },
+    "timeline": {
+      "urdu": "waqt ka taayun / timeline",
+      "example": "Project timeline ke mutabiq chal raha hai."
+    },
+    "follow-up": {
+      "urdu": "baad ki rabta / follow-up",
+      "example": "Client ke sath email par follow-up lein."
+    },
+    "status update": {
+      "urdu": "maujooda soorat-e-haal / status update",
+      "example": "Task ka status update board par mark karein."
+    },
+    "feedback": {
+      "urdu": "raye ya mashwara / feedback",
+      "example": "Manager ne report par positive feedback diya."
+    },
+    "presentation": {
+      "urdu": "paishkash / presentation",
+      "example": "Board meeting mein presentation deni hai."
+    },
+    "report": {
+      "urdu": "report / tafseel",
+      "example": "Weekly summary report tayyar karein."
+    },
+    "summary": {
+      "urdu": "khulasa / summary",
+      "example": "Document ka khulasa shuru mein diya gaya hai."
+    },
+    "assignment": {
+      "urdu": "diya gaya kaam / assignment / task",
+      "example": "Har team member ko unki assignment mil gayi."
+    },
+    "responsibility": {
+      "urdu": "zimmedari / responsibility",
+      "example": "Quality check karna supervisor ki zimmedari hai."
+    },
+    "delegation": {
+      "urdu": "kaam doosron ko saumpna / delegation",
+      "example": "Effective delegation se time bachta hai."
+    },
+    "escalation": {
+      "urdu": "masle ko baray afsar tak pohanchana / escalation",
+      "example": "Agar issue resolve na ho toh escalation karein."
+    },
+    "priority": {
+      "urdu": "tarjeeh / priority",
+      "example": "Is order ko top priority par rakhein."
+    },
+    "backlog": {
+      "urdu": "baaqi bacha hua kaam / backlog",
+      "example": "Pichle haftay ka backlog clear karna hai."
+    },
+    "workflow": {
+      "urdu": "kaam ka nizaam aur rasta / workflow",
+      "example": "Approval workflow automated hai."
+    },
+    "sop": {
+      "urdu": "meyari tareeqa-kaar / SOP",
+      "example": "Har kaam SOP ke mutabiq hona chahiye."
+    },
+    "shift": {
+      "urdu": "kaam ka waqt / shift",
+      "example": "Night shift mein extra staff zaroori hai."
+    },
+    "overtime": {
+      "urdu": "izafi waqt / overtime",
+      "example": "Delivery meet karne ke liye overtime lagana para."
+    },
+    "attendance": {
+      "urdu": "haziri / attendance",
+      "example": "Biometric machine par attendance mark karein."
+    },
+    "leave": {
+      "urdu": "chutti / leave",
+      "example": "Annual leave approve ho gayi hai."
+    },
+    "onboarding": {
+      "urdu": "naye mulazim ko kaam sikhana / onboarding",
+      "example": "New joiner ki onboarding complete karein."
+    },
+    "handover": {
+      "urdu": "kaam ka charge doosre ko dena / handover",
+      "example": "Chutti par jane se pehle handover document karein."
+    },
+    "production": {
+      "urdu": "paidawar / production",
+      "example": "Daily production target 5000 pieces hai."
+    },
+    "shipment": {
+      "urdu": "khep / rawangi / shipment",
+      "example": "Export shipment port par deliver ho gayi."
+    },
+    "delivery": {
+      "urdu": "pohanch / delivery",
+      "example": "On-time delivery hamari pehli tarjeeh hai."
+    },
+    "dispatch": {
+      "urdu": "rawana karna / dispatch",
+      "example": "Finished goods warehouse se dispatch ho gaye."
+    },
+    "inventory": {
+      "urdu": "maal ka zakheera / stock / inventory",
+      "example": "Inventory audit har maah hota hai."
+    },
+    "warehouse": {
+      "urdu": "godam / warehouse",
+      "example": "Raw material warehouse mein shift kar dein."
+    },
+    "procurement": {
+      "urdu": "maal ki khareedari / procurement",
+      "example": "Fabric procurement team market gayi hai."
+    },
+    "supplier": {
+      "urdu": "maal faraham karne wala / supplier",
+      "example": "Supplier se fabric delivery ki confirmation lein."
+    },
+    "fabric": {
+      "urdu": "kapra / fabric",
+      "example": "Fabric quality lab mein test ho rahi hai."
+    },
+    "garment": {
+      "urdu": "tayyar libas / garment",
+      "example": "Export quality garments pack ho chuke hain."
+    },
+    "raw material": {
+      "urdu": "kham maal / raw material",
+      "example": "Raw material ki quality achi honi chahiye."
+    },
+    "lead time": {
+      "urdu": "order se tayyari tak ka waqt / lead time",
+      "example": "Is fabric ka lead time 15 din hai."
+    },
+    "defect": {
+      "urdu": "nuqs / kharabi / defect",
+      "example": "Stitching mein koi defect nahi hona chahiye."
+    },
+    "rejection": {
+      "urdu": "mustarad karna / reject hona / rejection",
+      "example": "Quality failure ki wajah se lot reject ho gayi."
+    },
+    "rework": {
+      "urdu": "dobara theek karna / rework",
+      "example": "Rejected pieces ko rework line par bhejein."
+    },
+    "inspection": {
+      "urdu": "muayana / check karna / inspection",
+      "example": "Final inspection report clear aayi hai."
+    },
+    "quality assurance": {
+      "urdu": "meyar ki tasdeeq / QA / quality assurance",
+      "example": "QA team sample check kar rahi hai."
+    },
+    "batch": {
+      "urdu": "khep / batch / lot",
+      "example": "Batch number label par print karein."
+    },
+    "throughput": {
+      "urdu": "kul nikalne wali paidawar / throughput",
+      "example": "Line balancing se throughput barh gayi."
+    },
+    "bottleneck": {
+      "urdu": "rukawat / bottleneck",
+      "example": "Ironing section production ka bottleneck hai."
+    },
+    "capacity": {
+      "urdu": "gunjaish ya salahiyat / capacity",
+      "example": "Factory apni full capacity par chal rahi hai."
+    },
+    "logistics": {
+      "urdu": "maal ki naqal-o-hamal / logistics",
+      "example": "Logistics partner shipment pick kar raha hai."
+    },
+    "cargo": {
+      "urdu": "bheja gaya maal / cargo",
+      "example": "Air cargo ke zariye emergency delivery bheji."
+    },
+    "data": {
+      "urdu": "data / maloomat",
+      "example": "Data analysis se trends samajh aate hain."
+    },
+    "dataset": {
+      "urdu": "data ka majmooa / dataset",
+      "example": "Clean dataset model training ke liye zaroori hai."
+    },
+    "database": {
+      "urdu": "database / data ka zakheera",
+      "example": "Database backup har raat generate hota hai."
+    },
+    "query": {
+      "urdu": "sawal ya talash / query / SQL query",
+      "example": "Database se query run kar ke records fetch karein."
+    },
+    "analytics": {
+      "urdu": "tajziya / analytics",
+      "example": "Power BI par analytics dashboard tayyar hai."
+    },
+    "dashboard": {
+      "urdu": "dashboard / samnay ka screen",
+      "example": "KPIs dashboard par live update ho rahe hain."
+    },
+    "chart": {
+      "urdu": "chart / naqsha",
+      "example": "Bar chart mein monthly sales dikhayi gayi hain."
+    },
+    "graph": {
+      "urdu": "graph / tarsheem",
+      "example": "Trend graph upar ja raha hai."
+    },
+    "table": {
+      "urdu": "table / jadwal",
+      "example": "Data table Excel format mein export karein."
+    },
+    "spreadsheet": {
+      "urdu": "spreadsheet / Excel sheet",
+      "example": "Spreadsheet mein calculations auto update hoti hain."
+    },
+    "formula": {
+      "urdu": "formula / hisabi tareeqa",
+      "example": "Sum aur average ka formula lagayein."
+    },
+    "calculation": {
+      "urdu": "hisab kitab / calculation",
+      "example": "Totals ki calculation dobara check karein."
+    },
+    "filter": {
+      "urdu": "filter karna / chhan-na",
+      "example": "Date column par filter lagayein."
+    },
+    "sort": {
+      "urdu": "tarteeb dena / sort karna",
+      "example": "Data ko ascending order mein sort karein."
+    },
+    "trend": {
+      "urdu": "rujhan / trend",
+      "example": "Market trend AI ki taraf ja raha hai."
+    },
+    "insight": {
+      "urdu": "ahem nukta / gehra tajziya / insight",
+      "example": "Data se ahem business insights milin."
+    },
+    "prediction": {
+      "urdu": "paish-goi / prediction",
+      "example": "Model sales ki accurate prediction karta hai."
+    },
+    "agent": {
+      "urdu": "AI agent / karkun",
+      "example": "LangGraph agent tasks ko automate karta hai."
+    },
+    "pipeline": {
+      "urdu": "marhalawaar nizaam / pipeline",
+      "example": "Data processing pipeline automate ho chuki hai."
+    },
+    "automation": {
+      "urdu": "khud-kaar nizaam / automation",
+      "example": "Repetitive tasks ki automation se time bachta hai."
+    },
+    "script": {
+      "urdu": "script / code ki file",
+      "example": "Python script data clean karti hai."
+    },
+    "deploy": {
+      "urdu": "live karna / launch karna / deploy",
+      "example": "Application production server par deploy ho gayi."
+    },
+    "bug": {
+      "urdu": "code mein kharabi / bug",
+      "example": "Testing team ne login bug report kiya."
+    },
+    "fix": {
+      "urdu": "theek karna / hal / fix",
+      "example": "Developer ne code fix kar diya."
+    },
+    "feature": {
+      "urdu": "nayi sahulat / feature",
+      "example": "Naye release mein export feature add hua hai."
+    },
+    "api": {
+      "urdu": "API / connecting nizaam",
+      "example": "REST API ke zariye backend connect hota hai."
+    },
+    "sync": {
+      "urdu": "ham-aahang karna / sync karna",
+      "example": "Data ko cloud ke sath sync karein."
+    },
+    "async": {
+      "urdu": "alag alag waqt par chalna / asynchronous",
+      "example": "Async tasks background mein chalte hain."
+    }
+  },
+  "roman_urdu_to_english": {
+    "aamdani": {
+      "english": "revenue",
+      "meaning_en": "Refers to revenue in business/operational context"
+    },
+    "revenue": {
+      "english": "revenue",
+      "meaning_en": "Refers to revenue in business/operational context"
+    },
+    "munafa": {
+      "english": "profit",
+      "meaning_en": "Refers to profit in business/operational context"
+    },
+    "profit": {
+      "english": "profit",
+      "meaning_en": "Refers to profit in business/operational context"
+    },
+    "nuqsaan": {
+      "english": "loss",
+      "meaning_en": "Refers to loss in business/operational context"
+    },
+    "loss": {
+      "english": "loss",
+      "meaning_en": "Refers to loss in business/operational context"
+    },
+    "margin": {
+      "english": "margin",
+      "meaning_en": "Refers to margin in business/operational context"
+    },
+    "bachat ka tanasub": {
+      "english": "margin",
+      "meaning_en": "Refers to margin in business/operational context"
+    },
+    "budget": {
+      "english": "budget",
+      "meaning_en": "Refers to budget in business/operational context"
+    },
+    "takhmeena": {
+      "english": "budget",
+      "meaning_en": "Refers to budget in business/operational context"
+    },
+    "paish-goi": {
+      "english": "prediction",
+      "meaning_en": "Refers to prediction in business/operational context"
+    },
+    "andaza": {
+      "english": "forecast",
+      "meaning_en": "Refers to forecast in business/operational context"
+    },
+    "forecast": {
+      "english": "forecast",
+      "meaning_en": "Refers to forecast in business/operational context"
+    },
+    "hisab kitab ki janch": {
+      "english": "audit",
+      "meaning_en": "Refers to audit in business/operational context"
+    },
+    "audit": {
+      "english": "audit",
+      "meaning_en": "Refers to audit in business/operational context"
+    },
+    "sarmaya-kaari": {
+      "english": "investment",
+      "meaning_en": "Refers to investment in business/operational context"
+    },
+    "investment": {
+      "english": "investment",
+      "meaning_en": "Refers to investment in business/operational context"
+    },
+    "akhrajaat": {
+      "english": "expense",
+      "meaning_en": "Refers to expense in business/operational context"
+    },
+    "expenses": {
+      "english": "expense",
+      "meaning_en": "Refers to expense in business/operational context"
+    },
+    "chalan": {
+      "english": "invoice",
+      "meaning_en": "Refers to invoice in business/operational context"
+    },
+    "bill": {
+      "english": "invoice",
+      "meaning_en": "Refers to invoice in business/operational context"
+    },
+    "invoice": {
+      "english": "invoice",
+      "meaning_en": "Refers to invoice in business/operational context"
+    },
+    "raseed": {
+      "english": "receipt",
+      "meaning_en": "Refers to receipt in business/operational context"
+    },
+    "payment receipt": {
+      "english": "receipt",
+      "meaning_en": "Refers to receipt in business/operational context"
+    },
+    "billing": {
+      "english": "billing",
+      "meaning_en": "Refers to billing in business/operational context"
+    },
+    "hisab banana": {
+      "english": "billing",
+      "meaning_en": "Refers to billing in business/operational context"
+    },
+    "paison ka bahaav": {
+      "english": "cashflow",
+      "meaning_en": "Refers to cashflow in business/operational context"
+    },
+    "cash flow": {
+      "english": "cashflow",
+      "meaning_en": "Refers to cashflow in business/operational context"
+    },
+    "tankhwahon ka nizaam": {
+      "english": "payroll",
+      "meaning_en": "Refers to payroll in business/operational context"
+    },
+    "payroll": {
+      "english": "payroll",
+      "meaning_en": "Refers to payroll in business/operational context"
+    },
+    "muaahida": {
+      "english": "contract",
+      "meaning_en": "Refers to contract in business/operational context"
+    },
+    "contract": {
+      "english": "contract",
+      "meaning_en": "Refers to contract in business/operational context"
+    },
+    "raza-mandi": {
+      "english": "agreement",
+      "meaning_en": "Refers to agreement in business/operational context"
+    },
+    "agreement": {
+      "english": "agreement",
+      "meaning_en": "Refers to agreement in business/operational context"
+    },
+    "maal supply karne wala": {
+      "english": "vendor",
+      "meaning_en": "Refers to vendor in business/operational context"
+    },
+    "vendor": {
+      "english": "vendor",
+      "meaning_en": "Refers to vendor in business/operational context"
+    },
+    "gahak": {
+      "english": "client",
+      "meaning_en": "Refers to client in business/operational context"
+    },
+    "client": {
+      "english": "client",
+      "meaning_en": "Refers to client in business/operational context"
+    },
+    "kharidar": {
+      "english": "customer",
+      "meaning_en": "Refers to customer in business/operational context"
+    },
+    "customer": {
+      "english": "customer",
+      "meaning_en": "Refers to customer in business/operational context"
+    },
+    "hissay-daar": {
+      "english": "stakeholder",
+      "meaning_en": "Refers to stakeholder in business/operational context"
+    },
+    "stakeholder": {
+      "english": "stakeholder",
+      "meaning_en": "Refers to stakeholder in business/operational context"
+    },
+    "baatcheet": {
+      "english": "negotiation",
+      "meaning_en": "Refers to negotiation in business/operational context"
+    },
+    "muzakraat": {
+      "english": "negotiation",
+      "meaning_en": "Refers to negotiation in business/operational context"
+    },
+    "negotiation": {
+      "english": "negotiation",
+      "meaning_en": "Refers to negotiation in business/operational context"
+    },
+    "tajweez": {
+      "english": "proposal",
+      "meaning_en": "Refers to proposal in business/operational context"
+    },
+    "business proposal": {
+      "english": "proposal",
+      "meaning_en": "Refers to proposal in business/operational context"
+    },
+    "manzoori": {
+      "english": "approval",
+      "meaning_en": "Refers to approval in business/operational context"
+    },
+    "approval": {
+      "english": "approval",
+      "meaning_en": "Refers to approval in business/operational context"
+    },
+    "qawaneen par amal": {
+      "english": "compliance",
+      "meaning_en": "Refers to compliance in business/operational context"
+    },
+    "compliance": {
+      "english": "compliance",
+      "meaning_en": "Refers to compliance in business/operational context"
+    },
+    "hikmat-e-amli": {
+      "english": "strategy",
+      "meaning_en": "Refers to strategy in business/operational context"
+    },
+    "qanoon": {
+      "english": "policy",
+      "meaning_en": "Refers to policy in business/operational context"
+    },
+    "policy": {
+      "english": "policy",
+      "meaning_en": "Refers to policy in business/operational context"
+    },
+    "khatrah": {
+      "english": "risk",
+      "meaning_en": "Refers to risk in business/operational context"
+    },
+    "risk": {
+      "english": "risk",
+      "meaning_en": "Refers to risk in business/operational context"
+    },
+    "mansooba-bandi": {
+      "english": "strategy",
+      "meaning_en": "Refers to strategy in business/operational context"
+    },
+    "strategy": {
+      "english": "strategy",
+      "meaning_en": "Refers to strategy in business/operational context"
+    },
+    "ahem marhala": {
+      "english": "milestone",
+      "meaning_en": "Refers to milestone in business/operational context"
+    },
+    "milestone": {
+      "english": "milestone",
+      "meaning_en": "Refers to milestone in business/operational context"
+    },
+    "hadaf": {
+      "english": "target",
+      "meaning_en": "Refers to target in business/operational context"
+    },
+    "target": {
+      "english": "target",
+      "meaning_en": "Refers to target in business/operational context"
+    },
+    "kargardagi ka paimana": {
+      "english": "kpi",
+      "meaning_en": "Refers to kpi in business/operational context"
+    },
+    "kpi": {
+      "english": "kpi",
+      "meaning_en": "Refers to kpi in business/operational context"
+    },
+    "kargardagi": {
+      "english": "performance",
+      "meaning_en": "Refers to performance in business/operational context"
+    },
+    "performance": {
+      "english": "performance",
+      "meaning_en": "Refers to performance in business/operational context"
+    },
+    "mehnat aur waqt ki bachat": {
+      "english": "efficiency",
+      "meaning_en": "Refers to efficiency in business/operational context"
+    },
+    "efficiency": {
+      "english": "efficiency",
+      "meaning_en": "Refers to efficiency in business/operational context"
+    },
+    "paidawari salahiyat": {
+      "english": "productivity",
+      "meaning_en": "Refers to productivity in business/operational context"
+    },
+    "productivity": {
+      "english": "productivity",
+      "meaning_en": "Refers to productivity in business/operational context"
+    },
+    "barhne aur phailne ki gunjaish": {
+      "english": "scalability",
+      "meaning_en": "Refers to scalability in business/operational context"
+    },
+    "scalability": {
+      "english": "scalability",
+      "meaning_en": "Refers to scalability in business/operational context"
+    },
+    "meeting": {
+      "english": "meeting",
+      "meaning_en": "Refers to meeting in business/operational context"
+    },
+    "ijlaas": {
+      "english": "meeting",
+      "meaning_en": "Refers to meeting in business/operational context"
+    },
+    "guftagu": {
+      "english": "meeting",
+      "meaning_en": "Refers to meeting in business/operational context"
+    },
+    "bahes ke ahem nukat": {
+      "english": "agenda",
+      "meaning_en": "Refers to agenda in business/operational context"
+    },
+    "agenda": {
+      "english": "agenda",
+      "meaning_en": "Refers to agenda in business/operational context"
+    },
+    "meeting ke faislay": {
+      "english": "minutes",
+      "meaning_en": "Refers to minutes in business/operational context"
+    },
+    "mom": {
+      "english": "minutes",
+      "meaning_en": "Refers to minutes in business/operational context"
+    },
+    "minutes": {
+      "english": "minutes",
+      "meaning_en": "Refers to minutes in business/operational context"
+    },
+    "aakhri tareekh": {
+      "english": "deadline",
+      "meaning_en": "Refers to deadline in business/operational context"
+    },
+    "waqt ki pabandi": {
+      "english": "deadline",
+      "meaning_en": "Refers to deadline in business/operational context"
+    },
+    "deadline": {
+      "english": "deadline",
+      "meaning_en": "Refers to deadline in business/operational context"
+    },
+    "auqaat-e-kaar": {
+      "english": "schedule",
+      "meaning_en": "Refers to schedule in business/operational context"
+    },
+    "schedule": {
+      "english": "schedule",
+      "meaning_en": "Refers to schedule in business/operational context"
+    },
+    "waqt ka taayun": {
+      "english": "timeline",
+      "meaning_en": "Refers to timeline in business/operational context"
+    },
+    "timeline": {
+      "english": "timeline",
+      "meaning_en": "Refers to timeline in business/operational context"
+    },
+    "baad ki rabta": {
+      "english": "follow-up",
+      "meaning_en": "Refers to follow-up in business/operational context"
+    },
+    "follow-up": {
+      "english": "follow-up",
+      "meaning_en": "Refers to follow-up in business/operational context"
+    },
+    "maujooda soorat-e-haal": {
+      "english": "status update",
+      "meaning_en": "Refers to status update in business/operational context"
+    },
+    "status update": {
+      "english": "status update",
+      "meaning_en": "Refers to status update in business/operational context"
+    },
+    "raye ya mashwara": {
+      "english": "feedback",
+      "meaning_en": "Refers to feedback in business/operational context"
+    },
+    "feedback": {
+      "english": "feedback",
+      "meaning_en": "Refers to feedback in business/operational context"
+    },
+    "paishkash": {
+      "english": "presentation",
+      "meaning_en": "Refers to presentation in business/operational context"
+    },
+    "presentation": {
+      "english": "presentation",
+      "meaning_en": "Refers to presentation in business/operational context"
+    },
+    "report": {
+      "english": "report",
+      "meaning_en": "Refers to report in business/operational context"
+    },
+    "tafseel": {
+      "english": "report",
+      "meaning_en": "Refers to report in business/operational context"
+    },
+    "khulasa": {
+      "english": "summary",
+      "meaning_en": "Refers to summary in business/operational context"
+    },
+    "summary": {
+      "english": "summary",
+      "meaning_en": "Refers to summary in business/operational context"
+    },
+    "diya gaya kaam": {
+      "english": "assignment",
+      "meaning_en": "Refers to assignment in business/operational context"
+    },
+    "assignment": {
+      "english": "assignment",
+      "meaning_en": "Refers to assignment in business/operational context"
+    },
+    "task": {
+      "english": "assignment",
+      "meaning_en": "Refers to assignment in business/operational context"
+    },
+    "zimmedari": {
+      "english": "responsibility",
+      "meaning_en": "Refers to responsibility in business/operational context"
+    },
+    "responsibility": {
+      "english": "responsibility",
+      "meaning_en": "Refers to responsibility in business/operational context"
+    },
+    "kaam doosron ko saumpna": {
+      "english": "delegation",
+      "meaning_en": "Refers to delegation in business/operational context"
+    },
+    "delegation": {
+      "english": "delegation",
+      "meaning_en": "Refers to delegation in business/operational context"
+    },
+    "masle ko baray afsar tak pohanchana": {
+      "english": "escalation",
+      "meaning_en": "Refers to escalation in business/operational context"
+    },
+    "escalation": {
+      "english": "escalation",
+      "meaning_en": "Refers to escalation in business/operational context"
+    },
+    "tarjeeh": {
+      "english": "priority",
+      "meaning_en": "Refers to priority in business/operational context"
+    },
+    "priority": {
+      "english": "priority",
+      "meaning_en": "Refers to priority in business/operational context"
+    },
+    "baaqi bacha hua kaam": {
+      "english": "backlog",
+      "meaning_en": "Refers to backlog in business/operational context"
+    },
+    "backlog": {
+      "english": "backlog",
+      "meaning_en": "Refers to backlog in business/operational context"
+    },
+    "kaam ka nizaam aur rasta": {
+      "english": "workflow",
+      "meaning_en": "Refers to workflow in business/operational context"
+    },
+    "workflow": {
+      "english": "workflow",
+      "meaning_en": "Refers to workflow in business/operational context"
+    },
+    "meyari tareeqa-kaar": {
+      "english": "sop",
+      "meaning_en": "Refers to sop in business/operational context"
+    },
+    "sop": {
+      "english": "sop",
+      "meaning_en": "Refers to sop in business/operational context"
+    },
+    "kaam ka waqt": {
+      "english": "shift",
+      "meaning_en": "Refers to shift in business/operational context"
+    },
+    "shift": {
+      "english": "shift",
+      "meaning_en": "Refers to shift in business/operational context"
+    },
+    "izafi waqt": {
+      "english": "overtime",
+      "meaning_en": "Refers to overtime in business/operational context"
+    },
+    "overtime": {
+      "english": "overtime",
+      "meaning_en": "Refers to overtime in business/operational context"
+    },
+    "haziri": {
+      "english": "attendance",
+      "meaning_en": "Refers to attendance in business/operational context"
+    },
+    "attendance": {
+      "english": "attendance",
+      "meaning_en": "Refers to attendance in business/operational context"
+    },
+    "chutti": {
+      "english": "leave",
+      "meaning_en": "Refers to leave in business/operational context"
+    },
+    "leave": {
+      "english": "leave",
+      "meaning_en": "Refers to leave in business/operational context"
+    },
+    "naye mulazim ko kaam sikhana": {
+      "english": "onboarding",
+      "meaning_en": "Refers to onboarding in business/operational context"
+    },
+    "onboarding": {
+      "english": "onboarding",
+      "meaning_en": "Refers to onboarding in business/operational context"
+    },
+    "kaam ka charge doosre ko dena": {
+      "english": "handover",
+      "meaning_en": "Refers to handover in business/operational context"
+    },
+    "handover": {
+      "english": "handover",
+      "meaning_en": "Refers to handover in business/operational context"
+    },
+    "paidawar": {
+      "english": "production",
+      "meaning_en": "Refers to production in business/operational context"
+    },
+    "production": {
+      "english": "production",
+      "meaning_en": "Refers to production in business/operational context"
+    },
+    "khep": {
+      "english": "batch",
+      "meaning_en": "Refers to batch in business/operational context"
+    },
+    "rawangi": {
+      "english": "shipment",
+      "meaning_en": "Refers to shipment in business/operational context"
+    },
+    "shipment": {
+      "english": "shipment",
+      "meaning_en": "Refers to shipment in business/operational context"
+    },
+    "pohanch": {
+      "english": "delivery",
+      "meaning_en": "Refers to delivery in business/operational context"
+    },
+    "delivery": {
+      "english": "delivery",
+      "meaning_en": "Refers to delivery in business/operational context"
+    },
+    "rawana karna": {
+      "english": "dispatch",
+      "meaning_en": "Refers to dispatch in business/operational context"
+    },
+    "dispatch": {
+      "english": "dispatch",
+      "meaning_en": "Refers to dispatch in business/operational context"
+    },
+    "maal ka zakheera": {
+      "english": "inventory",
+      "meaning_en": "Refers to inventory in business/operational context"
+    },
+    "stock": {
+      "english": "inventory",
+      "meaning_en": "Refers to inventory in business/operational context"
+    },
+    "inventory": {
+      "english": "inventory",
+      "meaning_en": "Refers to inventory in business/operational context"
+    },
+    "godam": {
+      "english": "warehouse",
+      "meaning_en": "Refers to warehouse in business/operational context"
+    },
+    "warehouse": {
+      "english": "warehouse",
+      "meaning_en": "Refers to warehouse in business/operational context"
+    },
+    "maal ki khareedari": {
+      "english": "procurement",
+      "meaning_en": "Refers to procurement in business/operational context"
+    },
+    "procurement": {
+      "english": "procurement",
+      "meaning_en": "Refers to procurement in business/operational context"
+    },
+    "maal faraham karne wala": {
+      "english": "supplier",
+      "meaning_en": "Refers to supplier in business/operational context"
+    },
+    "supplier": {
+      "english": "supplier",
+      "meaning_en": "Refers to supplier in business/operational context"
+    },
+    "kapra": {
+      "english": "fabric",
+      "meaning_en": "Refers to fabric in business/operational context"
+    },
+    "fabric": {
+      "english": "fabric",
+      "meaning_en": "Refers to fabric in business/operational context"
+    },
+    "tayyar libas": {
+      "english": "garment",
+      "meaning_en": "Refers to garment in business/operational context"
+    },
+    "garment": {
+      "english": "garment",
+      "meaning_en": "Refers to garment in business/operational context"
+    },
+    "kham maal": {
+      "english": "raw material",
+      "meaning_en": "Refers to raw material in business/operational context"
+    },
+    "raw material": {
+      "english": "raw material",
+      "meaning_en": "Refers to raw material in business/operational context"
+    },
+    "order se tayyari tak ka waqt": {
+      "english": "lead time",
+      "meaning_en": "Refers to lead time in business/operational context"
+    },
+    "lead time": {
+      "english": "lead time",
+      "meaning_en": "Refers to lead time in business/operational context"
+    },
+    "nuqs": {
+      "english": "defect",
+      "meaning_en": "Refers to defect in business/operational context"
+    },
+    "kharabi": {
+      "english": "defect",
+      "meaning_en": "Refers to defect in business/operational context"
+    },
+    "defect": {
+      "english": "defect",
+      "meaning_en": "Refers to defect in business/operational context"
+    },
+    "mustarad karna": {
+      "english": "rejection",
+      "meaning_en": "Refers to rejection in business/operational context"
+    },
+    "reject hona": {
+      "english": "rejection",
+      "meaning_en": "Refers to rejection in business/operational context"
+    },
+    "rejection": {
+      "english": "rejection",
+      "meaning_en": "Refers to rejection in business/operational context"
+    },
+    "dobara theek karna": {
+      "english": "rework",
+      "meaning_en": "Refers to rework in business/operational context"
+    },
+    "rework": {
+      "english": "rework",
+      "meaning_en": "Refers to rework in business/operational context"
+    },
+    "muayana": {
+      "english": "inspection",
+      "meaning_en": "Refers to inspection in business/operational context"
+    },
+    "check karna": {
+      "english": "inspection",
+      "meaning_en": "Refers to inspection in business/operational context"
+    },
+    "inspection": {
+      "english": "inspection",
+      "meaning_en": "Refers to inspection in business/operational context"
+    },
+    "meyar ki tasdeeq": {
+      "english": "quality assurance",
+      "meaning_en": "Refers to quality assurance in business/operational context"
+    },
+    "qa": {
+      "english": "quality assurance",
+      "meaning_en": "Refers to quality assurance in business/operational context"
+    },
+    "quality assurance": {
+      "english": "quality assurance",
+      "meaning_en": "Refers to quality assurance in business/operational context"
+    },
+    "batch": {
+      "english": "batch",
+      "meaning_en": "Refers to batch in business/operational context"
+    },
+    "lot": {
+      "english": "batch",
+      "meaning_en": "Refers to batch in business/operational context"
+    },
+    "kul nikalne wali paidawar": {
+      "english": "throughput",
+      "meaning_en": "Refers to throughput in business/operational context"
+    },
+    "throughput": {
+      "english": "throughput",
+      "meaning_en": "Refers to throughput in business/operational context"
+    },
+    "rukawat": {
+      "english": "bottleneck",
+      "meaning_en": "Refers to bottleneck in business/operational context"
+    },
+    "bottleneck": {
+      "english": "bottleneck",
+      "meaning_en": "Refers to bottleneck in business/operational context"
+    },
+    "gunjaish ya salahiyat": {
+      "english": "capacity",
+      "meaning_en": "Refers to capacity in business/operational context"
+    },
+    "capacity": {
+      "english": "capacity",
+      "meaning_en": "Refers to capacity in business/operational context"
+    },
+    "maal ki naqal-o-hamal": {
+      "english": "logistics",
+      "meaning_en": "Refers to logistics in business/operational context"
+    },
+    "logistics": {
+      "english": "logistics",
+      "meaning_en": "Refers to logistics in business/operational context"
+    },
+    "bheja gaya maal": {
+      "english": "cargo",
+      "meaning_en": "Refers to cargo in business/operational context"
+    },
+    "cargo": {
+      "english": "cargo",
+      "meaning_en": "Refers to cargo in business/operational context"
+    },
+    "data": {
+      "english": "data",
+      "meaning_en": "Refers to data in business/operational context"
+    },
+    "maloomat": {
+      "english": "data",
+      "meaning_en": "Refers to data in business/operational context"
+    },
+    "data ka majmooa": {
+      "english": "dataset",
+      "meaning_en": "Refers to dataset in business/operational context"
+    },
+    "dataset": {
+      "english": "dataset",
+      "meaning_en": "Refers to dataset in business/operational context"
+    },
+    "database": {
+      "english": "database",
+      "meaning_en": "Refers to database in business/operational context"
+    },
+    "data ka zakheera": {
+      "english": "database",
+      "meaning_en": "Refers to database in business/operational context"
+    },
+    "sawal ya talash": {
+      "english": "query",
+      "meaning_en": "Refers to query in business/operational context"
+    },
+    "query": {
+      "english": "query",
+      "meaning_en": "Refers to query in business/operational context"
+    },
+    "sql query": {
+      "english": "query",
+      "meaning_en": "Refers to query in business/operational context"
+    },
+    "tajziya": {
+      "english": "analytics",
+      "meaning_en": "Refers to analytics in business/operational context"
+    },
+    "analytics": {
+      "english": "analytics",
+      "meaning_en": "Refers to analytics in business/operational context"
+    },
+    "dashboard": {
+      "english": "dashboard",
+      "meaning_en": "Refers to dashboard in business/operational context"
+    },
+    "samnay ka screen": {
+      "english": "dashboard",
+      "meaning_en": "Refers to dashboard in business/operational context"
+    },
+    "chart": {
+      "english": "chart",
+      "meaning_en": "Refers to chart in business/operational context"
+    },
+    "naqsha": {
+      "english": "chart",
+      "meaning_en": "Refers to chart in business/operational context"
+    },
+    "graph": {
+      "english": "graph",
+      "meaning_en": "Refers to graph in business/operational context"
+    },
+    "tarsheem": {
+      "english": "graph",
+      "meaning_en": "Refers to graph in business/operational context"
+    },
+    "table": {
+      "english": "table",
+      "meaning_en": "Refers to table in business/operational context"
+    },
+    "jadwal": {
+      "english": "table",
+      "meaning_en": "Refers to table in business/operational context"
+    },
+    "spreadsheet": {
+      "english": "spreadsheet",
+      "meaning_en": "Refers to spreadsheet in business/operational context"
+    },
+    "excel sheet": {
+      "english": "spreadsheet",
+      "meaning_en": "Refers to spreadsheet in business/operational context"
+    },
+    "formula": {
+      "english": "formula",
+      "meaning_en": "Refers to formula in business/operational context"
+    },
+    "hisabi tareeqa": {
+      "english": "formula",
+      "meaning_en": "Refers to formula in business/operational context"
+    },
+    "hisab kitab": {
+      "english": "calculation",
+      "meaning_en": "Refers to calculation in business/operational context"
+    },
+    "calculation": {
+      "english": "calculation",
+      "meaning_en": "Refers to calculation in business/operational context"
+    },
+    "filter karna": {
+      "english": "filter",
+      "meaning_en": "Refers to filter in business/operational context"
+    },
+    "chhan-na": {
+      "english": "filter",
+      "meaning_en": "Refers to filter in business/operational context"
+    },
+    "tarteeb dena": {
+      "english": "sort",
+      "meaning_en": "Refers to sort in business/operational context"
+    },
+    "sort karna": {
+      "english": "sort",
+      "meaning_en": "Refers to sort in business/operational context"
+    },
+    "rujhan": {
+      "english": "trend",
+      "meaning_en": "Refers to trend in business/operational context"
+    },
+    "trend": {
+      "english": "trend",
+      "meaning_en": "Refers to trend in business/operational context"
+    },
+    "ahem nukta": {
+      "english": "insight",
+      "meaning_en": "Refers to insight in business/operational context"
+    },
+    "gehra tajziya": {
+      "english": "insight",
+      "meaning_en": "Refers to insight in business/operational context"
+    },
+    "insight": {
+      "english": "insight",
+      "meaning_en": "Refers to insight in business/operational context"
+    },
+    "prediction": {
+      "english": "prediction",
+      "meaning_en": "Refers to prediction in business/operational context"
+    },
+    "ai agent": {
+      "english": "agent",
+      "meaning_en": "Refers to agent in business/operational context"
+    },
+    "karkun": {
+      "english": "agent",
+      "meaning_en": "Refers to agent in business/operational context"
+    },
+    "marhalawaar nizaam": {
+      "english": "pipeline",
+      "meaning_en": "Refers to pipeline in business/operational context"
+    },
+    "pipeline": {
+      "english": "pipeline",
+      "meaning_en": "Refers to pipeline in business/operational context"
+    },
+    "khud-kaar nizaam": {
+      "english": "automation",
+      "meaning_en": "Refers to automation in business/operational context"
+    },
+    "automation": {
+      "english": "automation",
+      "meaning_en": "Refers to automation in business/operational context"
+    },
+    "script": {
+      "english": "script",
+      "meaning_en": "Refers to script in business/operational context"
+    },
+    "code ki file": {
+      "english": "script",
+      "meaning_en": "Refers to script in business/operational context"
+    },
+    "live karna": {
+      "english": "deploy",
+      "meaning_en": "Refers to deploy in business/operational context"
+    },
+    "launch karna": {
+      "english": "deploy",
+      "meaning_en": "Refers to deploy in business/operational context"
+    },
+    "deploy": {
+      "english": "deploy",
+      "meaning_en": "Refers to deploy in business/operational context"
+    },
+    "code mein kharabi": {
+      "english": "bug",
+      "meaning_en": "Refers to bug in business/operational context"
+    },
+    "bug": {
+      "english": "bug",
+      "meaning_en": "Refers to bug in business/operational context"
+    },
+    "theek karna": {
+      "english": "fix",
+      "meaning_en": "Refers to fix in business/operational context"
+    },
+    "hal": {
+      "english": "fix",
+      "meaning_en": "Refers to fix in business/operational context"
+    },
+    "fix": {
+      "english": "fix",
+      "meaning_en": "Refers to fix in business/operational context"
+    },
+    "nayi sahulat": {
+      "english": "feature",
+      "meaning_en": "Refers to feature in business/operational context"
+    },
+    "feature": {
+      "english": "feature",
+      "meaning_en": "Refers to feature in business/operational context"
+    },
+    "api": {
+      "english": "api",
+      "meaning_en": "Refers to api in business/operational context"
+    },
+    "connecting nizaam": {
+      "english": "api",
+      "meaning_en": "Refers to api in business/operational context"
+    },
+    "ham-aahang karna": {
+      "english": "sync",
+      "meaning_en": "Refers to sync in business/operational context"
+    },
+    "sync karna": {
+      "english": "sync",
+      "meaning_en": "Refers to sync in business/operational context"
+    },
+    "alag alag waqt par chalna": {
+      "english": "async",
+      "meaning_en": "Refers to async in business/operational context"
+    },
+    "asynchronous": {
+      "english": "async",
+      "meaning_en": "Refers to async in business/operational context"
+    }
+  }
+}

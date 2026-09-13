@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MAIN_PATH = ROOT / "main.py"
-DB_PATH = ROOT / "database.py"
+DB_PATH = ROOT / "core" / "database.py"
 
 
 def load_module(module_name: str, file_path: Path):
@@ -67,6 +67,8 @@ class AnalysisIntegrationTests(unittest.TestCase):
 
         audio_processor = types.ModuleType("utils.audio_processor")
         audio_processor.process_input = lambda source, chunk_minutes: ["chunk-1.wav"]
+        audio_processor.cleanup_chunks = lambda *args, **kwargs: None
+        audio_processor.cleanup_file = lambda *args, **kwargs: None
         sys.modules["utils.audio_processor"] = audio_processor
         setattr(utils_pkg, "audio_processor", audio_processor)
 
@@ -97,6 +99,8 @@ class AnalysisIntegrationTests(unittest.TestCase):
         extractor.extract_decisions = lambda transcript: decision_text
         extractor.extract_questions = lambda transcript: question_text
         sys.modules["extractor"] = extractor
+        sys.modules["core.extractor"] = extractor
+        setattr(core_pkg, "extractor", extractor)
 
         dotenv = types.ModuleType("dotenv")
         dotenv.load_dotenv = lambda *args, **kwargs: None
@@ -264,7 +268,7 @@ class AnalysisIntegrationTests(unittest.TestCase):
         self.assertEqual(result.decisions, [])
         self.assertEqual(result.questions, [])
 
-        record = database.get_video("meeting_deadbeef0001")
+        record = database.get_video("meeting_deadbeef0001_en")
         self.assertEqual(record["actions"], [])
         self.assertEqual(record["decisions"], [])
         self.assertEqual(record["questions"], [])
