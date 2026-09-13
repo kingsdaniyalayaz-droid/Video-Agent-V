@@ -219,100 +219,83 @@ def require_ffmpeg() -> str:
 # YOUTUBE URL UTILITIES
 # ============================================================
 
-def is_youtube_url(url: str) -> bool:
-    """
-    Determine whether input is a YouTube URL.
-    """
-
-    if not url:
-        return False
-
-    url = url.strip()
-
-    parsed = urlparse(url)
-
-    hostname = (
-        parsed.hostname or ""
-    ).lower()
-
-    youtube_hosts = {
-        "youtube.com",
-        "www.youtube.com",
-        "m.youtube.com",
-        "music.youtube.com",
-        "youtu.be",
-        "www.youtu.be",
-    }
-
-    return hostname in youtube_hosts
-
-
-def normalize_url(url: str) -> str:
-    """
-    Normalize common YouTube URL formats.
-    """
-
-    url = url.strip()
-
-    if not url:
-        raise ValueError(
-            "YouTube URL cannot be empty."
-        )
-
-    # youtube.com/watch...
-    if url.startswith("youtube.com/"):
-        return "https://" + url
-
-    # www.youtube.com/watch...
-    if url.startswith("www.youtube.com/"):
-        return "https://" + url
-
-    # youtu.be/...
-    if url.startswith("youtu.be/"):
-        return "https://" + url
-
-    return url
-
+YOUTUBE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{11}$")
 
 def extract_video_id(url: str) -> Optional[str]:
     """
     Extract YouTube video ID.
     """
+    if not url:
+        return None
+    url = url.strip()
+
+    if url.startswith("youtube.com/") or url.startswith("www.youtube.com/") or url.startswith("youtu.be/"):
+        url = "https://" + url
 
     try:
-
-        parsed = urlparse(
-            normalize_url(url)
-        )
-
-        hostname = (
-            parsed.hostname or ""
-        ).lower()
-
-        # youtu.be/<id>
-        if hostname in {
-            "youtu.be",
-            "www.youtu.be",
-        }:
-
-            return parsed.path.strip(
-                "/"
-            ) or None
-
-        # youtube.com/watch?v=<id>
-        query = parse_qs(
-            parsed.query
-        )
-
-        video_id = query.get("v")
-
-        if video_id:
-            return video_id[0]
-
+        parsed = urlparse(url)
     except Exception:
-        pass
+        return None
+
+    if parsed.scheme not in ("http", "https"):
+        return None
+
+    hostname = (parsed.hostname or "").lower()
+
+    valid_hosts = {
+        "youtube.com",
+        "www.youtube.com",
+        "m.youtube.com",
+        "music.youtube.com",
+        "youtu.be",
+    }
+
+    if hostname not in valid_hosts:
+        return None
+
+    candidate_id = None
+
+    if hostname == "youtu.be":
+        candidate_id = parsed.path.strip("/")
+    else:
+        path = parsed.path
+        if path == "/watch":
+            qs = parse_qs(parsed.query)
+            if "v" in qs:
+                candidate_id = qs["v"][0]
+        elif path.startswith("/shorts/"):
+            candidate_id = path.split("/shorts/")[1].split("/")[0]
+        elif path.startswith("/embed/"):
+            candidate_id = path.split("/embed/")[1].split("/")[0]
+        elif path.startswith("/v/"):
+            candidate_id = path.split("/v/")[1].split("/")[0]
+        elif path.startswith("/live/"):
+            candidate_id = path.split("/live/")[1].split("/")[0]
+
+    if candidate_id and YOUTUBE_ID_PATTERN.match(candidate_id):
+        return candidate_id
 
     return None
+
+def is_youtube_url(url: str) -> bool:
+    """
+    Determine whether input is a YouTube URL.
+    """
+    return extract_video_id(url) is not None
+
+def normalize_url(url: str) -> str:
+    """
+    Normalize common YouTube URL formats.
+    """
+    url = url.strip()
+    if not url:
+        raise ValueError("YouTube URL cannot be empty.")
+        
+    video_id = extract_video_id(url)
+    if video_id:
+        return f"https://www.youtube.com/watch?v={video_id}"
+    
+    return url
 
 
 # ============================================================
