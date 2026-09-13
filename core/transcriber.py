@@ -33,13 +33,31 @@ from __future__ import annotations
 
 import gc
 import os
+import tempfile
 from pathlib import Path
 from typing import Callable, Optional, Union
+import threading
 
 import torch
 import whisper
 from dotenv import load_dotenv
 
+
+# ============================================================
+# SECURITY CONSTANTS
+# ============================================================
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ALLOWED_BASE_DIRS = {
+    PROJECT_ROOT,
+    PROJECT_ROOT / "data",
+    Path(tempfile.gettempdir()).resolve(),
+    Path.home() / "Downloads"
+}
+
+ALLOWED_AUDIO_EXTENSIONS = {
+    ".wav", ".mp3", ".m4a", ".ogg", ".webm", ".flac", ".aac", ".opus"
+}
 
 # ============================================================
 # ENVIRONMENT
@@ -108,6 +126,9 @@ SUPPORTED_MODELS = {
 # ============================================================
 
 _model: Optional[whisper.Whisper] = None
+_cached_model_key: Optional[tuple[str, str]] = None
+_MODEL_INIT_LOCK = threading.Lock()
+_INFERENCE_LOCK = threading.Lock()
 
 
 # ============================================================
@@ -153,23 +174,22 @@ def get_device_info() -> dict:
 # ============================================================
 
 def print_device_info() -> None:
-    """Display Whisper runtime information."""
-    print("\n" + "=" * 70)
-    print("                  WHISPER ENGINE")
-    print("=" * 70)
-    print(f"Device        : {DEVICE}")
+    """Print configuration to console."""
+    print("=" * 40)
+    print("Whisper Transcription Engine")
+    print("=" * 40)
     print(f"Model         : {WHISPER_MODEL}")
     print(f"Language      : {WHISPER_LANGUAGE}")
-    if DEVICE == "cuda":
+
+    if torch.cuda.is_available():
+        print(f"CUDA          : Available ({torch.cuda.get_device_name(0)})")
         try:
-            print(f"GPU           : {torch.cuda.get_device_name(0)}")
-            print(f"CUDA          : {torch.version.cuda}")
             props = torch.cuda.get_device_properties(0)
             vram_gb = props.total_memory / (1024 ** 3)
             print(f"VRAM          : {vram_gb:.2f} GB")
         except Exception:
             pass
-        print(f"Precision     : {"FP16" if WHISPER_FP16 else "FP32"}")
+        print(f"Precision     : {'FP16' if WHISPER_FP16 else 'FP32'}")
     else:
         print("CUDA          : Unavailable")
         print("Precision     : FP32")
@@ -178,80 +198,127 @@ print_device_info()
 
 
 # ============================================================
-# VALIDATE MODEL
+# RESOLVERS
 # ============================================================
 
-def validate_model_name() -> None:
-    """
-    Validate Whisper model configured in .env.
-    """
+def resolve_device(device: Optional[str] = None) -> str:
+    if device is not None:
+        return device
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
-    if WHISPER_MODEL not in SUPPORTED_MODELS:
-
+def resolve_model_name(model_name: Optional[str] = None) -> str:
+    target = model_name if model_name is not None else WHISPER_MODEL
+    if target not in SUPPORTED_MODELS:
         raise ValueError(
-            f"Unsupported Whisper model: "
-            f"{WHISPER_MODEL}. "
-            f"Supported models: "
-            f"{', '.join(sorted(SUPPORTED_MODELS))}"
+            f"Unsupported Whisper model: {target}. "
+            f"Supported models: {', '.join(sorted(SUPPORTED_MODELS))}"
         )
+    return target
+
+def validate_language(language: str) -> str:
+    """Validate and normalize a language name or code against Whisper supported languages."""
+    if not isinstance(language, str):
+        raise TypeError(f"Language must be a string, got {type(language).__name__}")
+    
+    language = language.strip().lower()
+    if not language:
+        raise ValueError("Language cannot be empty or whitespace")
+        
+    import whisper.tokenizer
+    if language in whisper.tokenizer.LANGUAGES:
+        return language
+    if language in whisper.tokenizer.TO_LANGUAGE_CODE:
+        return whisper.tokenizer.TO_LANGUAGE_CODE[language]
+        
+    raise ValueError(f"Unsupported Whisper language: '{language}'")
+
+# Update the global default immediately
+WHISPER_LANGUAGE = validate_language(WHISPER_LANGUAGE)
 
 
 # ============================================================
 # LOAD MODEL
 # ============================================================
 
-def load_model() -> whisper.Whisper:
+def load_model(model_name: Optional[str] = None, device: Optional[str] = None) -> whisper.Whisper:
     """
     Load Whisper model once and cache it.
+
+    Args:
+        model_name: Optional model name to override env.
+        device: Optional device name to override env.
 
     Returns:
         Cached Whisper model.
     """
 
-    global _model
+    global _model, _cached_model_key
 
-    if _model is not None:
+    target_model = resolve_model_name(model_name)
+    target_device = resolve_device(device)
+    target_key = (target_model, target_device)
+
+    if _model is not None and _cached_model_key == target_key:
         return _model
 
-    validate_model_name()
-
-    print(
-        f"\nðŸ“¦ Loading Whisper model: "
-        f"{WHISPER_MODEL}"
-    )
-
-    print(
-        f"ðŸš€ Device: {DEVICE}"
-    )
-
-    try:
-
-        _model = whisper.load_model(
-            WHISPER_MODEL,
-            device=DEVICE,
-        )
-
-    except Exception as exc:
-
-        raise RuntimeError(
-            "Unable to load Whisper model. "
-            f"Model={WHISPER_MODEL}, "
-            f"Device={DEVICE}. "
-            f"Reason: {exc}"
-        ) from exc
-
-    print(
-        "âœ… Whisper model loaded successfully."
-    )
-
-    if DEVICE == "cuda":
+    with _MODEL_INIT_LOCK:
+        # Double-check inside lock
+        if _model is not None and _cached_model_key == target_key:
+            return _model
+            
+        # If model is loaded but config differs, unload it safely
+        if _model is not None:
+            print("\nðŸ§¹ Configuration changed. Releasing previous Whisper model...")
+            del _model
+            _model = None
+            _cached_model_key = None
+            import gc
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                try:
+                    torch.cuda.ipc_collect()
+                except Exception:
+                    pass
 
         print(
-            f"ðŸŽ® GPU: "
-            f"{torch.cuda.get_device_name(0)}"
+            f"\nðŸ“¦ Loading Whisper model: "
+            f"{target_model}"
         )
 
-    return _model
+        print(
+            f"ðŸš€ Device: {target_device}"
+        )
+
+        try:
+
+            _model = whisper.load_model(
+                target_model,
+                device=target_device,
+            )
+            _cached_model_key = target_key
+
+        except Exception as exc:
+
+            raise RuntimeError(
+                "Unable to load Whisper model. "
+                f"Model={target_model}, "
+                f"Device={target_device}. "
+                f"Reason: {exc}"
+            ) from exc
+
+        print(
+            "âœ… Whisper model loaded successfully."
+        )
+
+        if target_device == "cuda":
+
+            print(
+                f"ðŸŽ® GPU: "
+                f"{torch.cuda.get_device_name(0)}"
+            )
+
+        return _model
 
 
 # ============================================================
@@ -266,18 +333,20 @@ def unload_model() -> None:
     because the same model should be reused for all chunks.
     """
 
-    global _model
+    global _model, _cached_model_key
 
-    if _model is None:
-        return
+    with _MODEL_INIT_LOCK:
+        if _model is None:
+            return
 
-    print(
-        "\nðŸ§¹ Releasing Whisper model..."
-    )
+        print(
+            "\nðŸ§¹ Releasing Whisper model..."
+        )
 
-    del _model
+        del _model
 
-    _model = None
+        _model = None
+        _cached_model_key = None
 
     gc.collect()
 
@@ -315,28 +384,28 @@ def validate_audio_file(
 
     path = Path(audio_path)
 
-    if not path.exists():
+    if path.is_symlink():
+        raise ValueError(f"Symlinks are not allowed: {path}")
 
-        raise FileNotFoundError(
-            f"Audio file does not exist: "
-            f"{path}"
-        )
+    try:
+        resolved_path = path.resolve(strict=True)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Audio file does not exist: {path}")
 
-    if not path.is_file():
+    is_contained = any(resolved_path.is_relative_to(base) for base in ALLOWED_BASE_DIRS)
+    if not is_contained:
+        raise ValueError("Security error: Path traversal detected")
 
-        raise ValueError(
-            f"Audio path is not a file: "
-            f"{path}"
-        )
+    if not resolved_path.is_file():
+        raise ValueError(f"Audio path is not a file: {resolved_path}")
 
-    if path.stat().st_size <= 0:
+    if resolved_path.suffix.lower() not in ALLOWED_AUDIO_EXTENSIONS:
+        raise ValueError(f"Unsupported audio extension: {resolved_path.suffix}")
 
-        raise ValueError(
-            f"Audio file is empty: "
-            f"{path}"
-        )
+    if resolved_path.stat().st_size <= 0:
+        raise ValueError(f"Audio file is empty: {resolved_path}")
 
-    return path
+    return resolved_path
 
 
 # ============================================================
@@ -444,7 +513,7 @@ def transcribe_chunk(
     # --------------------------------------------------------
 
     source_language = (
-        language.strip().lower()
+        validate_language(language)
         if language
         else WHISPER_LANGUAGE
     )
@@ -524,10 +593,11 @@ def transcribe_chunk(
 
     try:
 
-        result = model.transcribe(
-            str(path),
-            **options,
-        )
+        with _INFERENCE_LOCK:
+            result = model.transcribe(
+                str(path),
+                **options,
+            )
 
     except RuntimeError as exc:
 
@@ -679,6 +749,9 @@ def transcribe_all(
 
     load_model()
 
+    if language:
+        language = validate_language(language)
+    
     # --------------------------------------------------------
     # Start
     # --------------------------------------------------------
