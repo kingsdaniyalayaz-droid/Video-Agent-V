@@ -189,7 +189,19 @@ def _set_rate_limit_cooldown(delay: float) -> None:
         if new_until > _RATE_LIMIT_COOLDOWN_UNTIL:
             _RATE_LIMIT_COOLDOWN_UNTIL = new_until
 
-def _wait_for_rate_limit_cooldown(sleeper: Callable[[float], None] = time.sleep) -> None:
+import threading
+
+def interruptible_sleep(delay: float, cancel_event: threading.Event | None = None) -> None:
+    """Sleep for delay seconds, but wake up early if cancel_event is set."""
+    if delay <= 0:
+        return
+    if cancel_event is not None:
+        cancel_event.wait(timeout=delay)
+    else:
+        threading.Event().wait(timeout=delay)
+
+
+def _wait_for_rate_limit_cooldown(sleeper: Callable[[float], None] = interruptible_sleep) -> None:
 
     while True:
 
@@ -252,6 +264,8 @@ RATE_LIMIT_BACKOFF_FACTOR = _env_float("RATE_LIMIT_BACKOFF_FACTOR", 2.0)
 RATE_LIMIT_MAX_DELAY = _env_float("RATE_LIMIT_MAX_DELAY", 120.0)        # hard ceiling
 
 RATE_LIMIT_JITTER_FACTOR = _env_float("RATE_LIMIT_JITTER_FACTOR", 0.2)  # + up to 20%
+
+TOTAL_DEADLINE_SECONDS = float(os.getenv("TOTAL_DEADLINE_SECONDS", "120.0"))
 
 RATE_LIMIT_MAX_WAIT_SECONDS = _env_float("RATE_LIMIT_MAX_WAIT_SECONDS", 120.0)          # Retry-After cap
 
@@ -3959,9 +3973,11 @@ def _invoke_llm_with_retries(
 
     max_delay: float = API_MAX_DELAY,
 
-    sleeper: Callable[[float], None] = time.sleep,
+    sleeper: Callable[[float], None] = interruptible_sleep,
 
     request_timeout: float | None = None,
+    
+    cancel_event: threading.Event | None = None,
 
 ) -> Any:
 
@@ -3980,14 +3996,20 @@ def _invoke_llm_with_retries(
         raise ValueError("request_timeout must be positive when provided")
 
 
-
+    deadline = time.monotonic() + TOTAL_DEADLINE_SECONDS
     last_error: Exception | None = None
 
     for attempt in range(1, max_attempts + 1):
 
         print(f"🔌 {operation_name} attempt {attempt}/{max_attempts}")
 
-        _wait_for_rate_limit_cooldown(sleeper)
+        # if cancel_event is passed, _wait_for_rate_limit_cooldown needs it, 
+        # but sleeper doesn't take cancel_event directly unless we wrap it.
+        # Wait, interruptible_sleep handles it!
+        if sleeper is interruptible_sleep and cancel_event is not None:
+            _wait_for_rate_limit_cooldown(lambda d: interruptible_sleep(d, cancel_event))
+        else:
+            _wait_for_rate_limit_cooldown(sleeper)
 
         started = time.monotonic()
 
@@ -4210,12 +4232,22 @@ def _invoke_llm_with_retries(
             else:
 
                 delay = _retry_delay(attempt, base_delay, max_delay)
+                
+                now = time.monotonic()
+                if now + delay > deadline:
+                    raise TimeoutError(
+                        f"Retry budget exceeded. "
+                        f"Requested delay: {delay:.1f}s would exceed deadline."
+                    ) from exc
 
                 print(f"⚠️  Temporary error: {_safe_error_text(exc)}")
 
                 print(f"⏳ Waiting {delay:.1f} seconds before retry...")
 
-                sleeper(delay)
+                if sleeper is interruptible_sleep and cancel_event is not None:
+                    interruptible_sleep(delay, cancel_event)
+                else:
+                    sleeper(delay)
 
     raise RetryableAPIError(
 
@@ -6311,7 +6343,7 @@ def translate_chunk(
 
     semantic_review_max_payload_chars: int = SEMANTIC_REVIEW_MAX_PAYLOAD_CHARS,
 
-    sleeper: Callable[[float], None] = time.sleep,
+    sleeper: Callable[[float], None] = interruptible_sleep,
 
     reviewer_llm: Any | None = None,
 

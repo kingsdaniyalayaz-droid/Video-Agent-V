@@ -30,6 +30,7 @@ LLM:
 """
 
 from __future__ import annotations
+import threading
 
 import math
 import os
@@ -90,6 +91,9 @@ MAX_REDUCTION_ROUNDS = int(
         "5",
     )
 )
+
+MAX_RETRY_AFTER_DELAY = min(float(os.getenv("RETRY_AFTER_CEILING", "60.0")), 120.0)
+TOTAL_DEADLINE_SECONDS = float(os.getenv("TOTAL_DEADLINE_SECONDS", "120.0"))
 
 
 # ============================================================
@@ -185,8 +189,8 @@ def _is_retryable_llm_error(exc: Exception) -> bool:
     return any(marker in text for marker in retryable_markers)
 
 
-def _extract_retry_delay(exc: Exception) -> float | None:
-    """Extract a positive, finite provider-supplied retry delay in seconds."""
+def _extract_retry_delay(exc: Exception, default_delay: float) -> float:
+    """Extract a positive, finite provider-supplied retry delay, or return default."""
     retry_after = getattr(exc, "retry_after", None)
     candidates = [retry_after]
 
@@ -209,7 +213,7 @@ def _extract_retry_delay(exc: Exception) -> float | None:
         except (TypeError, ValueError):
             continue
         if math.isfinite(delay) and delay > 0:
-            return delay
+            return min(delay, MAX_RETRY_AFTER_DELAY)
 
     match = re.search(
         r"(?:please\s+)?(?:try\s+again\s+in|retry\s+after|retry\s+in)\s*"
@@ -225,11 +229,22 @@ def _extract_retry_delay(exc: Exception) -> float | None:
             if unit in {"millisecond", "milliseconds", "ms"}:
                 delay /= 1000.0
             if math.isfinite(delay) and delay > 0:
-                return delay
+                return min(delay, MAX_RETRY_AFTER_DELAY)
         except (TypeError, ValueError):
             pass
 
-    return None
+    return default_delay
+
+
+def interruptible_sleep(delay: float, cancel_event: threading.Event | None = None) -> None:
+    """Sleep for delay seconds, but wake up early if cancel_event is set."""
+    if delay <= 0:
+        return
+    if cancel_event is not None:
+        cancel_event.wait(timeout=delay)
+    else:
+        # We can still use threading.Event().wait() as a safer blocking sleep
+        threading.Event().wait(timeout=delay)
 
 
 def _invoke_with_retry(
@@ -238,9 +253,11 @@ def _invoke_with_retry(
     payload: dict[str, str],
     max_retries: int = 4,
     base_delay: float = 1.0,
+    cancel_event: threading.Event | None = None,
 ):
-    """Retry transient LLM/API failures with exponential backoff."""
+    """Retry transient LLM/API failures with exponential backoff and budget."""
     last_error: Exception | None = None
+    deadline = time.monotonic() + TOTAL_DEADLINE_SECONDS
 
     for attempt in range(1, max_retries + 1):
         try:
@@ -256,16 +273,22 @@ def _invoke_with_retry(
                     f"Reason: {exc}"
                 ) from exc
 
-            delay = _extract_retry_delay(exc)
-            if delay is None:
-                delay = base_delay * (2 ** (attempt - 1))
+            current_default = base_delay * (2 ** (attempt - 1))
+            delay = _extract_retry_delay(exc, current_default)
+            
+            now = time.monotonic()
+            if now + delay > deadline:
+                raise TimeoutError(
+                    f"Retry budget exceeded for {operation_name}. "
+                    f"Requested delay: {delay:.1f}s would exceed deadline."
+                ) from exc
 
             print(
                 f"\nLLM API temporary error during {operation_name} "
                 f"({exc}). Retrying... Attempt {attempt + 1}/{max_retries}"
             )
             print(f"Waiting {delay} seconds before retry...")
-            time.sleep(delay)
+            interruptible_sleep(delay, cancel_event)
 
     if last_error is not None:
         raise RuntimeError(

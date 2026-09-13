@@ -28,8 +28,11 @@ Uses:
 from __future__ import annotations
 import os
 
+import math
+import math
 import re
 import time
+import threading
 
 from dotenv import load_dotenv
 
@@ -57,6 +60,9 @@ TRANSLATION_CHAR_CHUNK_SIZE = int(os.getenv("TRANSLATION_CHAR_CHUNK_SIZE", "3500
 TRANSLATION_MAX_RETRIES = 3
 TRANSLATION_RETRY_BASE_DELAY = 1.0
 TRANSLATION_RETRY_MAX_DELAY = 8.0
+
+RETRY_AFTER_CEILING = min(float(os.getenv("RETRY_AFTER_CEILING", "60.0")), 120.0)
+TOTAL_DEADLINE_SECONDS = float(os.getenv("TOTAL_DEADLINE_SECONDS", "120.0"))
 
 
 # ============================================================
@@ -364,16 +370,71 @@ def _is_retryable_translation_error(
     return any(marker in message for marker in transient_markers)
 
 
+def extract_retry_after(exc: Exception, default: float = 0.0) -> float:
+    """Extract and validate the Retry-After value from an exception."""
+    retry_after = getattr(exc, "retry_after", None)
+    candidates = [retry_after]
+
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", None)
+    if headers is not None:
+        try:
+            candidates.extend([headers.get("retry-after"), headers.get("Retry-After")])
+        except (AttributeError, TypeError):
+            pass
+
+    for value in candidates:
+        try:
+            delay = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(delay) and delay > 0:
+            return min(delay, RETRY_AFTER_CEILING)
+
+    match = re.search(
+        r"(?:please\s+)?(?:try\s+again\s+in|retry\s+after|retry\s+in)\s*"
+        r"([0-9]+(?:\.[0-9]+)?)\s*"
+        r"(milliseconds?|ms|seconds?|secs?|sec|s)\b",
+        str(exc),
+        flags=re.IGNORECASE,
+    )
+    if match is not None:
+        try:
+            delay = float(match.group(1))
+            unit = match.group(2).lower()
+            if unit in {"millisecond", "milliseconds", "ms"}:
+                delay /= 1000.0
+            if math.isfinite(delay) and delay > 0:
+                return min(delay, RETRY_AFTER_CEILING)
+        except (TypeError, ValueError):
+            pass
+
+    return default
+
+
+def interruptible_sleep(delay: float, cancel_event: threading.Event | None = None) -> None:
+    """Sleep for delay seconds, but wake up early if cancel_event is set."""
+    if delay <= 0:
+        return
+    if cancel_event is not None:
+        cancel_event.wait(timeout=delay)
+    else:
+        # We can still use threading.Event().wait() as a safer blocking sleep
+        threading.Event().wait(timeout=delay)
+
+
 def _invoke_translation_with_retry(
     chain,
     payload: dict[str, str],
     *,
     chunk_index: int,
     total_chunks: int,
+    cancel_event: threading.Event | None = None,
 ):
-    """Invoke one chunk with a bounded retry and exponential backoff."""
+    """Invoke one chunk with a bounded retry, exponential backoff, and Retry-After support."""
     attempt = 1
     total_attempts = TRANSLATION_MAX_RETRIES + 1
+    deadline = time.monotonic() + TOTAL_DEADLINE_SECONDS
 
     while True:
         try:
@@ -390,10 +451,20 @@ def _invoke_translation_with_retry(
                     f"Reason: {exc}"
                 ) from exc
 
-            delay = min(
+            exp_delay = min(
                 TRANSLATION_RETRY_BASE_DELAY * (2 ** retries_used),
                 TRANSLATION_RETRY_MAX_DELAY,
             )
+            server_delay = extract_retry_after(exc)
+            delay = min(max(server_delay, exp_delay), RETRY_AFTER_CEILING)
+
+            now = time.monotonic()
+            if now + delay > deadline:
+                raise TimeoutError(
+                    f"Retry budget exceeded. "
+                    f"Requested delay: {delay:.1f}s would exceed deadline."
+                ) from exc
+
             print(
                 f"Retrying translation chunk "
                 f"{chunk_index}/{total_chunks}"
@@ -403,7 +474,7 @@ def _invoke_translation_with_retry(
             )
             print(f"Reason: {exc}")
             print(f"Waiting {delay:.1f} seconds")
-            time.sleep(delay)
+            interruptible_sleep(delay, cancel_event)
             attempt += 1
 
 
