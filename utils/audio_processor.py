@@ -454,16 +454,11 @@ def build_youtube_options(
 
         options["cookiefile"] = str(cookie_file)
 
-        log(
-            f"Using YouTube cookie file:\n"
-            f"{cookie_file.name}"
-        )
+        log("YouTube authentication cookies: Enabled")
 
     else:
 
-        log(
-            "No YouTube cookie file configured."
-        )
+        log("YouTube authentication cookies: Disabled")
 
     return options
 
@@ -1542,8 +1537,8 @@ if __name__ == "__main__":
     cookies = get_cookie_file()
 
     print(
-        f"\nYouTube cookies:\n"
-        f"{cookies.name if cookies else 'NOT FOUND'}"
+        f"\nYouTube cookies: "
+        f"{'Enabled' if cookies else 'Disabled'}"
     )
 
     print(
