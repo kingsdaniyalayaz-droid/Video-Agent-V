@@ -15,6 +15,7 @@ typed exceptions are available.
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, Iterator, Optional
 
 from core.roman_urdu_translator import (
@@ -119,11 +120,32 @@ def get_partial_translation(exc: Optional[BaseException]) -> str:
     return ""
 
 
-def _redact(value: str) -> str:
-    secret = os.getenv("MISTRAL_API_KEY", "")
-    if secret:
-        value = value.replace(secret, "[REDACTED]")
-    return value
+def redact_sensitive_info(text: str) -> str:
+    if not text:
+        return text
+
+    patterns = [
+        r"bearer\s+[a-zA-Z0-9_\-\.]{15,}",
+        r"sk-or-v1-[a-zA-Z0-9]{32,}",
+        r"sk-[a-zA-Z0-9_\-]{20,}",
+        r"AIza[0-9A-Za-z\-_]{35}",
+        r"gsk_[a-zA-Z0-9_\-]{20,}",
+        r"[?&](?:key|api_key|token|auth)=[^&\s]+",
+        r"authorization:\s*[^\r\n]+"
+    ]
+
+    for pattern in patterns:
+        text = re.sub(pattern, "[REDACTED]", text, flags=re.IGNORECASE)
+
+    for k, v in os.environ.items():
+        if k.endswith(("_KEY", "_TOKEN", "_SECRET", "_PASSWORD")):
+            if isinstance(v, str) and len(v) >= 8:
+                text = text.replace(v, "[REDACTED]")
+
+    return text
+
+
+_redact = redact_sensitive_info
 
 
 def _safe_detail(exc: Optional[BaseException]) -> str:
